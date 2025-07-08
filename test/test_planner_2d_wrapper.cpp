@@ -33,7 +33,8 @@ int main(int argc, char ** argv){
     std::vector<std::vector<double>> jps_path, astar_path;
 
     // Call the wrapper
-    int ret = plan_2d(origin, dim, map, start, goal, resolution, jps_path, astar_path);
+    double time_jps;
+    int ret = plan_2d(origin, dim, map, start, goal, resolution, jps_path, time_jps, true);
     if(ret != 0) {
         std::cerr << "Planning failed!" << std::endl;
         return -1;

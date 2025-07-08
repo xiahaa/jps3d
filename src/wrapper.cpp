@@ -30,7 +30,7 @@ class Timer {
     high_resolution_clock::time_point _start;
 };
 
-int plan_2d(std::vector<float> &origin, std::vector<int> &dim, std::vector<signed char> &map, std::vector<float> &start, std::vector<float> &goal, float resolution, std::vector<std::vector<double> > &jps_path, std::vector<std::vector<double> > &astar_path)
+int plan_2d(std::vector<float> &origin, std::vector<int> &dim, std::vector<signed char> &map, std::vector<float> &start, std::vector<float> &goal, float resolution, std::vector<std::vector<double> > &path, double &time_spent, bool use_jps)
 {
     // store map in map_util
     std::shared_ptr<OccMapUtil> map_util = std::make_shared<OccMapUtil>();
@@ -46,26 +46,32 @@ int plan_2d(std::vector<float> &origin, std::vector<int> &dim, std::vector<signe
     std::unique_ptr<JPSPlanner2D> planner_ptr(new JPSPlanner2D(false)); // false for not using JPS
     planner_ptr->setMapUtil(map_util); // Set collision checking function
     planner_ptr->updateMap();
-    Timer time_jps(true);
-    bool valid_jps = planner_ptr->plan(start_pt, goal_pt, 1, true); // Plan from start to goal using JPS
-    double dt_jps = time_jps.Elapsed().count();
-    const auto path_jps = planner_ptr->getRawPath(); // Get the planned raw path from JPS
-    printf("JPS Planner takes: %f ms\n", dt_jps);
-    printf("JPS Path Distance: %f\n", total_distance2f(path_jps));
-    Timer time_astar(true);
-    bool valid_astar = planner_ptr->plan(start_pt, goal_pt, 1, false); // Plan from start to goal using A*
-    double dt_astar = time_astar.Elapsed().count();
-    const auto path_astar = planner_ptr->getRawPath(); // Get the planned raw path from A*
-    printf("AStar Planner takes: %f ms\n", dt_astar);
-    printf("AStar Path Distance: %f\n", total_distance2f(path_astar));
-
-    // Store the paths in output vectors
-    jps_path.clear();
-    astar_path.clear();
-    for (const auto &pt : path_jps)
-        jps_path.push_back({pt(0), pt(1)});
-    for (const auto &pt : path_astar)
-        astar_path.push_back({pt(0), pt(1)});
-
+    if (use_jps)
+    {
+        Timer time_jps(true);
+        bool valid_jps = planner_ptr->plan(start_pt, goal_pt, 1, true); // Plan from start to goal using JPS
+        double dt_jps = time_jps.Elapsed().count();
+        const auto path_jps = planner_ptr->getRawPath(); // Get the planned raw path from JPS
+        // printf("JPS Planner takes: %f ms\n", dt_jps);
+        // printf("JPS Path Distance: %f\n", total_distance2f(path_jps));
+        path.clear();
+        for (const auto &pt : path_jps)
+            path.push_back({pt(0), pt(1)});
+        time_spent = dt_jps;
+        return valid_jps ? 0 : -1; // Return 0 if the path
+    }
+    else{
+        Timer time_astar(true);
+        bool valid_astar = planner_ptr->plan(start_pt, goal_pt, 1, false); // Plan from start to goal using A*
+        double dt_astar = time_astar.Elapsed().count();
+        const auto path_astar = planner_ptr->getRawPath(); // Get the planned raw path from A*
+        // printf("AStar Planner takes: %f ms\n", dt_astar);
+        // printf("AStar Path Distance: %f\n", total_distance2f(path_astar));
+        time_spent = dt_astar;
+        path.clear();
+        for (const auto &pt : path_astar)
+            path.push_back({pt(0), pt(1)});
+        return valid_astar ? 0 : -1; // Return 0 if the path is valid
+    }
     return 0;
 }
