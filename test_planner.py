@@ -80,6 +80,99 @@ def run_test():
         import traceback
         traceback.print_exc()
 
+def run_test_image():
+    import cv2
+    import numpy as np
+    filename = "./data/image.png"
+    print(f"Loading image from {filename}...")
+    img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)  # Load as grayscale
+
+    origin = [0,0]  # x, y of the map origin
+    dim = [img.shape[1], img.shape[0]]  # width, height in pixels
+    resolution = 0.1  # meters per pixel (assumed)
+
+    map_data = []
+    # transform image to map data, for each pixel, if the value is over 200, it is marked as 100 occipied, otherwise 0 free
+    for r in range(dim[1]):  # rows (y)
+        row_data = []
+        for c in range(dim[0]):  # cols (x)
+            pixel_value = img[r, c]
+            if isinstance(pixel_value, np.ndarray):
+                # If pixel is multi-channel (e.g., RGB), take the first channel
+                pixel_value = pixel_value[0]
+            if pixel_value > 200:  # Assuming a threshold for occupied
+                row_data.append(100)  # Occupied
+            else:
+                row_data.append(0)
+        map_data.extend(row_data)
+
+    # random pick start and goal points that are free and at least 1000 pixels apart
+    free_indices = [i for i, v in enumerate(map_data) if v == 0]
+    if len(free_indices) < 2:
+        print("Not enough free cells to pick start and goal points.")
+        return
+    import random
+    start_index = random.choice(free_indices)
+    goal_index = random.choice(free_indices)
+    while abs(start_index - goal_index) < 1000:  # Ensure at least 1000 pixels apart
+        goal_index = random.choice(free_indices)
+    start_w = [start_index % dim[0] * resolution, start_index // dim[0] * resolution]
+    goal_w = [goal_index % dim[0] * resolution, goal_index // dim[0] * resolution]
+
+    print(f"Map Origin: {origin}")
+    print(f"Map Dimensions (cells): {dim}")
+    print(f"Map Resolution: {resolution}")
+    print(f"Start (world): {start_w}")
+    print(f"Goal (world): {goal_w}")
+    # print(f"Map data (first 20 elements): {map_data[:20]}")
+    # print(f"Map data length: {len(map_data)} (Expected: {dim[0]*dim[1]})")
+
+    try:
+        # Call the plan_2d function
+        # plan_2d(origin, dim, map_data, start_w, goal_w, resolution, jps_path_out, astar_path_out)
+        # The wrapper returns a result object
+        result = jps_planner_bindings.plan_2d(
+            origin,
+            dim,
+            map_data,
+            start_w,
+            goal_w,
+            resolution,
+            use_jps=True  # Set to True to use JPS, False for A* only
+        )
+
+        jps_path = result.path
+        time_spent = result.time_spent
+
+        print("\nJPS Path:")
+        if jps_path:
+            for p in jps_path:
+                print(f"  ({p[0]:.2f}, {p[1]:.2f})")
+        else:
+            print("  No JPS path found.")
+
+        # show planning result using matplotlib
+        import matplotlib.pyplot as plt
+        plt.imshow(np.array(map_data).reshape(dim[1], dim[0]), cmap='gray', origin='lower')
+        plt.colorbar(label='Occupancy (0=free, 100=occupied)')
+        if jps_path:
+            jps_path_np = np.array(jps_path)
+            plt.plot(jps_path_np[:, 0] / resolution, jps_path_np[:, 1] / resolution, 'r-', label='JPS Path')
+        plt.scatter(start_w[0] / resolution, start_w[1] / resolution, c='green', label='Start', marker='o')
+        plt.scatter(goal_w[0] / resolution, goal_w[1] / resolution, c='blue', label='Goal', marker='x')
+        plt.legend()
+        plt.title('JPS Path Planning Result')
+        plt.xlabel('X (cells)')
+        plt.ylabel('Y (cells)')
+        plt.show()
+
+
+        print(f"\nTime spent in planning: {time_spent:.4f} ms")
+    except Exception as e:
+        print(f"\nAn error occurred: {e}")
+        import traceback
+        traceback.print_exc()
+
 if __name__ == "__main__":
-    run_test()
+    run_test_image()
     print("\nTest script finished.")
