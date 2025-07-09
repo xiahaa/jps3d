@@ -11,17 +11,16 @@ int plan_2d(std::vector<float> &origin,
             std::vector<float> &start,
             std::vector<float> &goal,
             float resolution,
-            std::vector<std::vector<double>> &jps_path,
-            std::vector<std::vector<double>> &astar_path);
-
+            std::vector<std::vector<double>> &path,
+            double &time_spent, bool use_jps);
 
 namespace py = pybind11;
 
 // Helper struct to make returning multiple values (the two paths) cleaner.
 // Pybind11 can automatically convert this struct to a Python tuple or a custom Python object.
 struct PlanResult {
-    std::vector<std::vector<double>> jps_path;
-    std::vector<std::vector<double>> astar_path;
+    std::vector<std::vector<double>> path;
+    double time_spent; // Time spent in seconds
     // We could also include other results like planning time or validity if needed.
 };
 
@@ -32,7 +31,7 @@ PlanResult plan_2d_wrapper(const std::vector<float> &origin,
                            const std::vector<signed char> &map_data, // Renamed to avoid conflict if map is a global
                            const std::vector<float> &start,
                            const std::vector<float> &goal,
-                           float resolution) {
+                           float resolution, bool use_jps = true) {
     // Create non-const copies for the C++ function if it expects non-const references for these inputs
     // Based on the signature `std::vector<float> &origin`, etc. it seems it might modify them or just didn't use const.
     // For safety, let's assume it might (though it's unlikely for origin, dim, map, start, goal).
@@ -44,25 +43,25 @@ PlanResult plan_2d_wrapper(const std::vector<float> &origin,
     std::vector<float> start_copy = start;
     std::vector<float> goal_copy = goal;
 
-    std::vector<std::vector<double>> jps_path_output;
-    std::vector<std::vector<double>> astar_path_output;
+    std::vector<std::vector<double>> path_output;
+    double time_spent = 0.0; // Initialize time spent
 
     // Call the original C++ function
     // The original function from wrapper.cpp is `plan_2d`
     // int plan_2d(std::vector<float> &origin, std::vector<int> &dim, std::vector<signed char> &map, std::vector<float> &start, std::vector<float> &goal, float resolution, std::vector<std::vector<double> > &jps_path, std::vector<std::vector<double> > &astar_path)
-    plan_2d(origin_copy, dim_copy, map_data_copy, start_copy, goal_copy, resolution, jps_path_output, astar_path_output);
+    plan_2d(origin_copy, dim_copy, map_data_copy, start_copy, goal_copy, resolution, path_output, time_spent, use_jps);
 
-    return {jps_path_output, astar_path_output};
+    return {path_output, time_spent};
 }
 
 PYBIND11_MODULE(jps_planner_bindings, m) {
-    m.doc() = "Pybind11 bindings for JPS and A* 2D planner";
+    m.doc() = "Pybind11 bindings for JPS 2D planner";
 
     // Define the PlanResult struct for Python
     py::class_<PlanResult>(m, "PlanResult")
         .def(py::init<>())
-        .def_readwrite("jps_path", &PlanResult::jps_path)
-        .def_readwrite("astar_path", &PlanResult::astar_path);
+        .def_readwrite("path", &PlanResult::path)
+        .def_readwrite("time_spent", &PlanResult::time_spent);
 
     // Expose the wrapper function to Python
     m.def("plan_2d", &plan_2d_wrapper, "Plans a 2D path using JPS and A*",
@@ -71,6 +70,7 @@ PYBIND11_MODULE(jps_planner_bindings, m) {
           py::arg("map_data"),
           py::arg("start"),
           py::arg("goal"),
-          py::arg("resolution")
+          py::arg("resolution"),
+          py::arg("use_jps") = true
     );
 }

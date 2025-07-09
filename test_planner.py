@@ -60,11 +60,12 @@ def run_test():
             map_data,
             start_w,
             goal_w,
-            resolution
+            resolution,
+            use_jps=True  # Set to True to use JPS, False for A* only
         )
 
-        jps_path = result.jps_path
-        astar_path = result.astar_path
+        jps_path = result.path
+        time_spent = result.time_spent
 
         print("\nJPS Path:")
         if jps_path:
@@ -73,13 +74,7 @@ def run_test():
         else:
             print("  No JPS path found.")
 
-        print("\nA* Path:")
-        if astar_path:
-            for p in astar_path:
-                print(f"  ({p[0]:.2f}, {p[1]:.2f})")
-        else:
-            print("  No A* path found.")
-
+        print(f"\nTime spent in planning: {time_spent:.4f} seconds")
     except Exception as e:
         print(f"\nAn error occurred: {e}")
         import traceback

@@ -35,13 +35,13 @@ cpp_args = ['-std=c++14'] # Using C++14
 # You will LIKELY need to change this or set an environment variable.
 # User indicated JPS headers are in 'include/jps_basis', so the root for jps_basis is 'include'.
 jps_include_dir = 'include'
-boost_include_dir = os.environ.get('BOOST_INCLUDE_DIR', '/usr/local/include') # Example, adjust as needed. This might also be in 'include' or a subfolder.
+boost_include_dir = os.environ.get('BOOST_INCLUDE_DIR', '/usr/include') # Example, adjust as needed. This might also be in 'include' or a subfolder.
 
 
 ext_modules = [
     Extension(
         'jps_planner_bindings', # Name of the module
-        [
+        sources=[
             'bindings.cpp',
             'src/wrapper.cpp',
             'src/jps_planner/jps_planner.cpp',
