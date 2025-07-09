@@ -1,145 +1,78 @@
-# MRSL Jump Point Search Planning Library v1.1
-[![wercker status](https://app.wercker.com/status/880ab5feaff25f0483e5f2c4f834b8c0/s/master "wercker status")](https://app.wercker.com/project/byKey/880ab5feaff25f0483e5f2c4f834b8c0)
-- - -
-Jump Point Search for path planning in both 2D and 3D environments. Original jump point seach algorithm is proposed in ["D. Harabor and A. Grastien. Online Graph Pruning for Pathfinding on Grid Maps. In National Conference on Artificial Intelligence (AAAI), 2011"](https://www.aaai.org/ocs/index.php/AAAI/AAAI11/paper/download/3761/4007). The 3D version is proposed in ["S. Liu, M. Watterson, K. Mohta, K. Sun, S. Bhattacharya, C.J. Taylor and V. Kumar. Planning Dynamically Feasible Trajectories for Quadrotors using Safe Flight Corridors in 3-D Complex Environments. ICRA 2017"](http://ieeexplore.ieee.org/abstract/document/7839930/).
+# Python Bindings for JPS Planner
 
-The distance map planner (`DMPlanner`) is also included in this repo. `DMPlanner` inflate a artificial potential field around obstacles and plan a safer path within a certain region. More detials are refered in the latter section.
+This project provides Python bindings for a C++ JPS (Jump Point Search) and A* path planner using Pybind11.
 
-## Installation
-#### Required:
- - Eigen3
- - yaml-cpp
+## Prerequisites
 
-Simply run following commands to install dependancy:
+To build and run this project, you will need the following:
+
+1.  **C++ Compiler:** A C++ compiler that supports C++14 (e.g., g++).
+    *   On Ubuntu/Debian: `sudo apt-get install build-essential`
+2.  **Python:** Python development headers are required. The version should be compatible with Pybind11.
+    *   On Ubuntu/Debian: `sudo apt-get install python3-dev` (adjust for your specific Python version if needed, e.g., `python3.X-dev`).
+3.  **Pip:** Python package installer.
+    *   On Ubuntu/Debian: `sudo apt-get install python3-pip`
+4.  **Pybind11:** For generating Python bindings.
+    *   Installation: `pip install pybind11`
+5.  **Setuptools:** For building the Python package.
+    *   Installation: `pip install setuptools`
+6.  **Eigen3 Library:** A C++ template library for linear algebra, used by the JPS planner.
+    *   On Ubuntu/Debian: `sudo apt-get install libeigen3-dev`
+    *   The headers are typically installed to `/usr/include/eigen3/`. If they are elsewhere, you'll need to adjust the `setup.py` script.
+7.  **Boost Libraries:** Several Boost libraries are used (e.g., Boost.Geometry, Boost.Heap).
+    *   On Ubuntu/Debian: `sudo apt-get install libboost-dev` (this is a meta-package that should pull in most necessary Boost development files).
+    *   Headers are typically installed to `/usr/include/boost/` or `/usr/local/include/boost/`. The `setup.py` script attempts to find these. If your Boost installation is in a non-standard location, you might need to adjust `setup.py` or set the `BOOST_INCLUDE_DIR` environment variable.
+
+## Project Structure (Relevant to Python Bindings)
+
+*   `src/`: Contains the core C++ planner code.
+    *   `wrapper.cpp`: Contains the `plan_2d` function that orchestrates JPS and A* planning. This is the primary C++ function exposed to Python.
+    *   `jps_planner/`: Contains the JPS planner implementation (`jps_planner.cpp`, `graph_search.cpp`). These are compiled as part of the Python module.
+    *   `jps_basis/`: (Assumed to be in an `include` directory relative to the project root, e.g., `include/jps_basis/`) Contains JPS data types and utilities (header files). These headers are needed during compilation.
+*   `include/`: (Assumed location for JPS headers like `jps_basis/` and `jps_planner/`) The `setup.py` is configured to look for JPS headers here. If your JPS headers are located elsewhere (e.g., system-wide or in a `third_party` directory), you'll need to update the `jps_include_dir` variable in `setup.py` or set the `JPS_INCLUDE_DIR` environment variable.
+*   `bindings.cpp`: Contains the Pybind11 wrapper code to expose `plan_2d` to Python.
+*   `setup.py`: Script to compile the C++ code into a Python module. This handles finding headers, source files, and compiler settings.
+*   `test_planner.py`: A Python script to test the generated bindings by importing the module and calling the `plan_2d` function.
+
+## Compilation Steps
+
+1.  **Ensure all prerequisites are installed.** Refer to the "Prerequisites" section.
+2.  **Verify Header Locations:**
+    *   **JPS Headers:** The `setup.py` script expects the JPS headers (e.g., `jps_basis/data_utils.h`, `jps_planner/jps_planner.h`) to be findable through an include path specified by `jps_include_dir`. By default, this is set to `'include'` (relative to the project root). If your `jps_basis` and `jps_planner` directories are located in `my_custom_jps_lib/include/`, you would set `jps_include_dir = 'my_custom_jps_lib/include'` in `setup.py`, or set the `JPS_INCLUDE_DIR` environment variable to this path.
+    *   **Eigen3 Headers:** Typically found in `/usr/include/eigen3/` after installation with `apt`. `setup.py` includes this path by default.
+    *   **Boost Headers:** Typically found in `/usr/include/` or `/usr/local/include/` after installation with `apt`. `setup.py` tries `/usr/local/include` by default for `BOOST_INCLUDE_DIR` (which might fall back to `/usr/include` if the compiler checks standard paths). If your Boost headers are elsewhere, adjust this in `setup.py` or via the environment variable.
+3.  **Build the Python Module:**
+    Navigate to the root directory of this project in your terminal and run:
+    ```bash
+    python setup.py build_ext --inplace
+    ```
+    This command will:
+    *   Compile `bindings.cpp`, `src/wrapper.cpp`, `src/jps_planner/jps_planner.cpp`, and `src/jps_planner/graph_search.cpp`.
+    *   Link them together into a shared object file (e.g., `jps_planner_bindings.cpython-XYZ.so`) in the current directory. The exact name depends on your Python version and platform.
+
+## Running the Test Script
+
+After successful compilation, you can run the example test script:
+
 ```bash
-$ sudo apt update
-$ sudo apt install -y libeigen3-dev libyaml-cpp-dev libboost-dev cmake
+python test_planner.py
 ```
 
-#### A) Simple cmake
-```bash
-$ mkdir build && cd build && cmake .. && make -j4
-```
+This script will import the compiled module (`jps_planner_bindings`), set up a sample map and planning request, call the `plan_2d` function, and print the resulting JPS and A* paths.
 
-#### B) Using CATKIN
-```bash
-$ mv jps3d ~/catkin_ws/src
-$ cd ~/catkin_ws & catkin_make_isolated -DCMAKE_BUILD_TYPE=Release
-```
+## Troubleshooting
 
-#### CTest
-Run following command in the `build` folder for testing the executables:
-```bash
-$ make test
-```
+*   **`fatal error: jps_basis/data_utils.h: No such file or directory` (or similar for JPS headers):**
+    The compiler cannot find the JPS library headers. Ensure the `jps_basis` and `jps_planner` directories (containing the `.h` files) are located within the path specified by `jps_include_dir` in `setup.py` (default is an `include/` subdirectory in your project root), or that the `JPS_INCLUDE_DIR` environment variable is correctly set to the parent directory of `jps_basis` and `jps_planner`.
+*   **`fatal error: Eigen/Geometry: No such file or directory`:**
+    Eigen3 headers are not found. Ensure `libeigen3-dev` is installed. If it's installed in a non-standard location, add that location to `include_dirs` in `setup.py`. `/usr/include/eigen3` is standard for Debian/Ubuntu and is added by default in the current `setup.py`.
+*   **`fatal error: boost/heap/d_ary_heap.hpp: No such file or directory` (or similar for Boost headers):**
+    Boost development headers are not found or incomplete. Ensure `libboost-dev` is installed. If Boost is in a non-standard location, update `boost_include_dir` in `setup.py` or set the `BOOST_INCLUDE_DIR` environment variable. The system path `/usr/include` (where boost headers are usually installed by `apt`) is typically checked by the compiler by default.
+*   **C++ Standard Errors (e.g., related to `std::conditional_t`, `auto` in lambdas):**
+    The version of Boost installed (likely Boost 1.83 if `libboost-dev` was installed recently on a modern Ubuntu) requires C++14 or newer. The `setup.py` has been configured to use `-std=c++14`. If you encounter such errors, verify this flag in `setup.py`.
+*   **Linker Errors (`undefined symbol: _ZN10JPSPlannerILi2EE4planE...` or similar):**
+    This usually means that some C++ source files providing necessary definitions were not compiled and linked.
+    *   If the error relates to `JPSPlanner` or similar, ensure all necessary `.cpp` files from the JPS library (e.g., `src/jps_planner/jps_planner.cpp`, `src/jps_planner/graph_search.cpp`) are listed in the `sources` of the `Extension` in `setup.py`. The current `setup.py` includes these.
+    *   If the error relates to other libraries (e.g., a specific Boost component that isn't header-only, though most commonly used ones are), you might need to add library linkage flags (`library_dirs`, `libraries`) to `setup.py`.
 
-If everything works, you should see the results as:
-```bash
-Running tests...
-Test project /home/sikang/thesis_ws/src/packages/jps3d/build
-    Start 1: test_planner_2d
-1/3 Test #1: test_planner_2d ..................   Passed    0.95 sec
-    Start 2: test_planner_3d
-2/3 Test #2: test_planner_3d ..................   Passed    0.00 sec
-    Start 3: test_distance_map_planner_2d
-3/3 Test #3: test_distance_map_planner_2d .....   Passed    1.26 sec
-
-100% tests passed, 0 tests failed out of 3
-
-Total Test time (real) =   2.22 sec
-```
-
-#### Include in other projects
-Note that in other repository, add following commands in `CMakeLists.txt` in order to correctly link `jps3d`:
-```sh
-find_package(jps3d REQUIRED)
-include_directories(${JPS3D_INCLUDE_DIRS})
-...
-add_executable(test_xxx src/test_xxx.cpp)
-target_link_libraries(test_xxx ${JPS3D_LIBRARIES})
-```
-
-Two libs will be installed: the standard `jps_lib` and a variation `dmp_lib`.
-
-## JPS Usage
-To start a simple `JPS` planning thread:
-```c++
-JPSPlanner2D planner(false); // Declare a 2D planner
-planner.setMapUtil(map_util); // Set collision checking function
-planner.updateMap(); // Set map, must be called before plan
-bool valid = planner.plan(start, goal, 1); // Plan from start to goal with heuristic weight 1, using JPS
-```
-
-First, the collision checking util must be loaded as:
-```c++
-planner.setMapUtil(MAP_UTIL_PTR); // Set collision checking function
-```
-The `MAP_UTIL_PTR` can be either `JPS::OCCMapUtil` for 2D or `JPS::VoxelMapUtil` for 3D. It can be confusing to set up this util, see the example code for more details.
-
-Second, call the function `updateMap()` to allocate the internal map:
-```
-planner.updateMap(); // Set map, must be called before plan
-```
-
-Finally, call the function `plan` to plan a path from `start` to `goal`. The third input is the heuristic weight, the forth input indicates whether planning with `JPS` or `A*`.
-By default, the forth input is set to be `true`, means the `JPS` is the default back-end. To use normal `A*`:
-```c++
-bool valid_astar = planner.plan(start, goal, 1, false); // Plan from start to goal with heuristic weight 1, using A*
-```
-
-Tow planners are provided for 2D and 3D map:
- - ```JPSPlanner2D```
- - ```JPSPlanner3D```
-
-#### Planning Example
-An example code for a 2D map is given in [`test/test_planner_2d.cpp`](https://github.com/sikang/jps3d/blob/master/test/test_planner_2d.cpp),
-in which we plan from start to goal using both ```A*``` and ```JPS```.
-The results are plotted in [corridor.png](https://github.com/sikang/jps3d/blob/master/data/corridor.png).
-Green path is from ```A*```, red path is from ```JPS```. Even though they are using two different routes and `JPS` is much faster, the distance/cost of two paths is the same.
-In other words, `JPS` guarantees the optimality but saves a significant amount of computation time.
-
-![Visualization](./data/corridor.png)
-```bash
-$ ./build/test_planner_2d ./data/corridor.yaml
-start: 2.5  -2
-goal:  35 2.5
-origin:  0 -5
-dim: 799 199
-resolution: 0.05
-JPS Planner takes: 5.000000 ms
-JPS Path Distance: 35.109545
-JPS Planner takes: 5.000000 ms
-AStar Planner takes: 62.000000 ms
-AStar Path Distance: 35.109545
-```
-
-An example in 3D map is presented in [`test/test_planner_3d.cpp`](https://github.com/sikang/jps3d/blob/master/test/test_planner_3d.cpp) with the yaml `data/simple3d.yaml`.
-
-##### Mapping Example
-To generate map in `yaml` format which can be loaded directly in the test node, a simple executable file [`test/create_map.cpp`](https://github.com/sikang/jps3d/blob/master/test/create_map.cpp) is used.
-User can easily change the location of blocks in the source code.
-
-## DMP Usage
-`DMPlanner` stands for distance map planner which utilizes the artificial potential field to find a safer local path around a given path. We changed the API for setting map of `DMPlanner` in v1.1.
-The key feature of this planner is its ability to push the path away from obstacles as much as possible. An example is given in the following figure
-[example_dmp.png](https://github.com/sikang/jps3d/blob/master/data/example_dmp.png), where red path comes from `JPS` which is always attached to obstacles and blue path is derived from `DMP` which is much safer.
-
-![Visualization](./data/example_dmp.png)
-
-The code for generating this figure is given in [`test/test_distance_map_2d.cpp`](https://github.com/sikang/jps3d/blob/master/test/test_distance_map_planner_2d.cpp).
-```bash
-$ ./build/test_distance_map_planner_2d ./data/corridor.yaml
-start: 2.5  -2
-goal:  35 2.5
-origin:  0 -5
-dim: 799 199
-resolution: 0.05
-JPS Planner takes: 7.000000 ms
-JPS Path Distance: 35.109545
-DMP Planner takes: 8.000000 ms
-DMP Path Distance: 37.186501
-```
-
-## Doxygen
-For more details, please refer to [Doxygen](https://kumarrobotics.github.io/jps3d).
-
+This `README.md` provides a guide to setting up the environment, compiling the Python module, and running the test.
