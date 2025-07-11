@@ -3,6 +3,7 @@ import numpy as np
 import jps_planner_bindings
 import sys
 import time
+import ThetaStarPlanner
 
 # --- CONFIG ---
 IMG_PATH = "data/image.png"
@@ -24,7 +25,7 @@ map_data = []
 for y in range(img_height):
     for x in range(img_width):
         if gray[x, y] > 200:  # white = obstacle
-            map_data.append(100)
+            map_data.append(1)
         else:
             map_data.append(0)
 
@@ -121,12 +122,18 @@ while running:
         goal_w = pixel_to_world(goal)
         try:
             # t0 = time.time()
-            result = jps_planner_bindings.plan_2d(
+            # result = jps_planner_bindings.plan_2d(
+            #     origin, dim, map_data, start_w, goal_w, RESOLUTION, True
+            # )
+            # t1 = time.time()
+            # path = [world_to_pixel(p) for p in result.path]
+            # plan_time = result.time_spent #(t1 - t0) * 1000  # ms
+            result = ThetaStarPlanner.plan_2d(
                 origin, dim, map_data, start_w, goal_w, RESOLUTION, True
             )
-            # t1 = time.time()
-            path = [world_to_pixel(p) for p in result.path]
-            plan_time = result.time_spent #(t1 - t0) * 1000  # ms
+            _, path_ret, time_spent = result[0], result[1], result[2]
+            path = [world_to_pixel(p) for p in path_ret]
+            plan_time = time_spent
         except Exception as e:
             print("Planning failed:", e)
             path = []

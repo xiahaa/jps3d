@@ -1,4 +1,10 @@
+
+# import sys
+# import os
 import jps_planner_bindings
+import ThetaStarPlanner
+
+# os.path.insert(0, os.path.abspath("."))
 
 def run_test():
     print("Testing jps_planner_bindings.plan_2d...")
@@ -54,18 +60,30 @@ def run_test():
         # Call the plan_2d function
         # plan_2d(origin, dim, map_data, start_w, goal_w, resolution, jps_path_out, astar_path_out)
         # The wrapper returns a result object
-        result = jps_planner_bindings.plan_2d(
+        # result = jps_planner_bindings.plan_2d(
+        #     origin,
+        #     dim,
+        #     map_data,
+        #     start_w,
+        #     goal_w,
+        #     resolution,
+        #     use_jps=True  # Set to True to use JPS, False for A* only
+        # # )
+        result = ThetaStarPlanner.plan_2d(
             origin,
             dim,
             map_data,
             start_w,
             goal_w,
             resolution,
-            use_jps=True  # Set to True to use JPS, False for A* only
+            True  # Use JPS
         )
+        # print(result)
+        # jps_path = result.path
+        # time_spent = result.time_spent
 
-        jps_path = result.path
-        time_spent = result.time_spent
+        status, jps_path, time_spent = result[0], result[1], result[2]
+
 
         print("\nJPS Path:")
         if jps_path:
@@ -89,7 +107,7 @@ def run_test_image():
 
     origin = [0,0]  # x, y of the map origin
     dim = [img.shape[1], img.shape[0]]  # width, height in pixels
-    resolution = 0.1  # meters per pixel (assumed)
+    resolution = 1  # meters per pixel (assumed)
 
     map_data = []
     # transform image to map data, for each pixel, if the value is over 200, it is marked as 100 occipied, otherwise 0 free
@@ -101,7 +119,7 @@ def run_test_image():
                 # If pixel is multi-channel (e.g., RGB), take the first channel
                 pixel_value = pixel_value[0]
             if pixel_value > 200:  # Assuming a threshold for occupied
-                row_data.append(100)  # Occupied
+                row_data.append(1)  # Occupied
             else:
                 row_data.append(0)
         map_data.extend(row_data)
@@ -131,18 +149,28 @@ def run_test_image():
         # Call the plan_2d function
         # plan_2d(origin, dim, map_data, start_w, goal_w, resolution, jps_path_out, astar_path_out)
         # The wrapper returns a result object
-        result = jps_planner_bindings.plan_2d(
+        # result = jps_planner_bindings.plan_2d(
+        #     origin,
+        #     dim,
+        #     map_data,
+        #     start_w,
+        #     goal_w,
+        #     resolution,
+        #     use_jps=True  # Set to True to use JPS, False for A* only
+        # )
+        # jps_path = result.path
+        # time_spent = result.time_spent
+        result = ThetaStarPlanner.plan_2d(
             origin,
             dim,
             map_data,
             start_w,
             goal_w,
             resolution,
-            use_jps=True  # Set to True to use JPS, False for A* only
+            True
         )
 
-        jps_path = result.path
-        time_spent = result.time_spent
+        status, jps_path, time_spent = result[0], result[1], result[2]
 
         print("\nJPS Path:")
         if jps_path:
@@ -175,4 +203,5 @@ def run_test_image():
 
 if __name__ == "__main__":
     run_test_image()
+    # run_test()
     print("\nTest script finished.")
