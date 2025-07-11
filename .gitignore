@@ -1,2 +1,7 @@
 build/
 nouse/
+3rdparty/AStar-JPS-ThetaStar/examples/example.xml
+.gitignore
+3rdparty/AStar-JPS-ThetaStar/examples/config.xml
+.gitignore
+3rdparty/AStar-JPS-ThetaStar/example.py
