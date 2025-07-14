@@ -4,6 +4,7 @@ import jps_planner_bindings
 import sys
 import time
 import ThetaStarPlanner
+import BL_JPS
 
 # --- CONFIG ---
 IMG_PATH = "data/image.png"
@@ -12,6 +13,9 @@ RESOLUTION = 1.0  # 1 pixel = 1 cell, adjust if needed
 # --- INIT ---
 pygame.init()
 img_raw = pygame.image.load(IMG_PATH)
+# resize
+# img_raw = pygame.transform.scale(img_raw, (200, 150))  # Resize to fit window
+# img_raw = pygame.transform.scale(img_raw, (400, 300))  # Resize to fit window
 img_height, img_width = img_raw.get_height(), img_raw.get_width()
 window_size = [min(800, img_width), min(600, img_height)]
 screen = pygame.display.set_mode(window_size, pygame.RESIZABLE)
@@ -42,6 +46,30 @@ def get_scale():
     scale_x = win_w / img_width
     scale_y = win_h / img_height
     return scale_x, scale_y
+
+def uncompress_bljps_path(path):
+    if not path:
+        return []
+    uncompressed_path = []
+    for p_id in range(len(path)-1):
+        current_p = [path[p_id][0],path[p_id][1]]
+        uncompressed_path.append(tuple(current_p))
+
+        while current_p[0] != path[p_id+1][0] or current_p[1] != path[p_id+1][1]:
+            if path[p_id+1][0] != current_p[0]:
+                if path[p_id+1][0] > current_p[0]:
+                    current_p[0] += 1
+                else:
+                    current_p[0] -= 1
+                uncompressed_path.append(tuple(current_p))
+            if path[p_id+1][1] != current_p[1]:
+                if path[p_id+1][1] > current_p[1]:
+                    current_p[1] += 1
+                else:
+                    current_p[1] -= 1
+                uncompressed_path.append(tuple(current_p))
+    # print (path, uncompressed_path)
+    return uncompressed_path
 
 def draw():
     scale_x, scale_y = get_scale()
@@ -128,12 +156,18 @@ while running:
             # t1 = time.time()
             # path = [world_to_pixel(p) for p in result.path]
             # plan_time = result.time_spent #(t1 - t0) * 1000  # ms
-            result = ThetaStarPlanner.plan_2d(
-                origin, dim, map_data, start_w, goal_w, RESOLUTION, True
-            )
-            _, path_ret, time_spent = result[0], result[1], result[2]
-            path = [world_to_pixel(p) for p in path_ret]
-            plan_time = time_spent
+            # result = ThetaStarPlanner.plan_2d(
+            #     origin, dim, map_data, start_w, goal_w, RESOLUTION, True
+            # )
+            # _, path_ret, time_spent = result[0], result[1], result[2]
+            # path = [world_to_pixel(p) for p in path_ret]
+            # plan_time = time_spent
+
+            # use BL_JPS for testing
+            bljps = BL_JPS.BL_JPS()
+            result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
+            plan_time = result.time_spent
+            path = uncompress_bljps_path(result.path)
         except Exception as e:
             print("Planning failed:", e)
             path = []

@@ -3,8 +3,34 @@
 # import os
 import jps_planner_bindings
 import ThetaStarPlanner
+import BL_JPS
+from datetime import datetime
 
 # os.path.insert(0, os.path.abspath("."))
+
+def uncompress_bljps_path(path):
+    if not path:
+        return []
+    uncompressed_path = []
+    for p_id in range(len(path)-1):
+        current_p = [path[p_id][0],path[p_id][1]]
+        uncompressed_path.append(tuple(current_p))
+
+        while current_p[0] != path[p_id+1][0] or current_p[1] != path[p_id+1][1]:
+            if path[p_id+1][0] != current_p[0]:
+                if path[p_id+1][0] > current_p[0]:
+                    current_p[0] += 1
+                else:
+                    current_p[0] -= 1
+                uncompressed_path.append(tuple(current_p))
+            if path[p_id+1][1] != current_p[1]:
+                if path[p_id+1][1] > current_p[1]:
+                    current_p[1] += 1
+                else:
+                    current_p[1] -= 1
+                uncompressed_path.append(tuple(current_p))
+    # print (path, uncompressed_path)
+    return uncompressed_path
 
 def run_test():
     print("Testing jps_planner_bindings.plan_2d...")
@@ -69,22 +95,35 @@ def run_test():
         #     resolution,
         #     use_jps=True  # Set to True to use JPS, False for A* only
         # # )
-        result = ThetaStarPlanner.plan_2d(
-            origin,
-            dim,
-            map_data,
-            start_w,
-            goal_w,
-            resolution,
-            True  # Use JPS
-        )
+        # result = ThetaStarPlanner.plan_2d(
+        #     origin,
+        #     dim,
+        #     map_data,
+        #     start_w,
+        #     goal_w,
+        #     resolution,
+        #     True  # Use JPS
+        # )
         # print(result)
         # jps_path = result.path
         # time_spent = result.time_spent
 
-        status, jps_path, time_spent = result[0], result[1], result[2]
+        # status, jps_path, time_spent = result[0], result[1], result[2]
 
-
+        # use BL_JPS for testing
+        start = datetime.now()
+        bljps = BL_JPS.BL_JPS()
+        bljps.preProcessGrid(map_data, width=dim[1], height=dim[0])
+        sX = int((start_w[0] - origin[0]) // resolution)
+        sY = int((start_w[1] - origin[1]) // resolution)
+        gX = int((goal_w[0] - origin[0]) // resolution)
+        gY = int((goal_w[1] - origin[1]) // resolution)
+        try:
+            jps_path = bljps.findSolution(sX, sY, gX, gY)
+            time_spent = (datetime.now()-start).total_seconds() * 1000  # Convert to milliseconds
+        except Exception as e:
+            print(f"BL_JPS error: {e}")
+            jps_path = None
         print("\nJPS Path:")
         if jps_path:
             for p in jps_path:
@@ -160,24 +199,37 @@ def run_test_image():
         # )
         # jps_path = result.path
         # time_spent = result.time_spent
-        result = ThetaStarPlanner.plan_2d(
-            origin,
-            dim,
-            map_data,
-            start_w,
-            goal_w,
-            resolution,
-            True
-        )
+        # result = ThetaStarPlanner.plan_2d(
+        #     origin,
+        #     dim,
+        #     map_data,
+        #     start_w,
+        #     goal_w,
+        #     resolution,
+        #     True
+        # )
 
-        status, jps_path, time_spent = result[0], result[1], result[2]
+        # status, jps_path, time_spent = result[0], result[1], result[2]
 
-        print("\nJPS Path:")
-        if jps_path:
-            for p in jps_path:
-                print(f"  ({p[0]:.2f}, {p[1]:.2f})")
-        else:
-            print("  No JPS path found.")
+        # use BL_JPS for testing
+        # start = datetime.now()
+        # bljps = BL_JPS.BL_JPS()
+        # bljps.preProcessGrid(map_data, width=dim[0], height=dim[1])
+        # sX = int((start_w[0] - origin[0]) // resolution)
+        # sY = int((start_w[1] - origin[1]) // resolution)
+        # gX = int((goal_w[0] - origin[0]) // resolution)
+        # gY = int((goal_w[1] - origin[1]) // resolution)
+        # try:
+            # jps_path = bljps.findSolution(sX, sY, gX, gY)
+            # time_spent = (datetime.now()-start).total_seconds() * 1000  # Convert to milliseconds
+        # except Exception as e:
+            # print(f"BL_JPS error: {e}")
+            # jps_path = None
+        bljps = BL_JPS.BL_JPS()
+        result = bljps.plan_2d(map_data, width=dim[0], height=dim[1], startX=start_w[0], startY=start_w[1], endX=goal_w[0], endY=goal_w[1], originX=origin[0], originY=origin[1], resolution=resolution)
+        plan_time = result.time_spent
+        jps_path = uncompress_bljps_path(result.path)
+        time_spent = result.time_spent
 
         # show planning result using matplotlib
         import matplotlib.pyplot as plt
