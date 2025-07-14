@@ -5,3 +5,6 @@ nouse/
 3rdparty/AStar-JPS-ThetaStar/examples/config.xml
 .gitignore
 3rdparty/AStar-JPS-ThetaStar/example.py
+3rdparty/BLJPS_Python/readme.md
+3rdparty/BLJPS_Python/BL_JPS.cp36-win_amd64.pyd
+3rdparty/BLJPS_Python/BL_JPS.cpython-36m-x86_64-linux-gnu.so
