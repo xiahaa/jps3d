@@ -172,7 +172,7 @@ while running:
 
             path = []
             plan_time = 0.0
-            result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2")
+            result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2") # jps, jps+, jps2, jps2+
         except Exception as e:
             print("Planning failed:", e)
             path = []

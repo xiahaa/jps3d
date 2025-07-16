@@ -26,3 +26,7 @@ nouse/
 3rdparty/Polyanya-main/warthog/python/.jps+
 3rdparty/Polyanya-main/warthog/python/@.jps+
 3rdparty/Polyanya-main/warthog/python/CMakeLists.txt
+*.jps+
+*.jps+
+bljps_sub.cpython-310-x86_64-linux-gnu.so
+map.txt
