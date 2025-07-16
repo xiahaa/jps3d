@@ -5,6 +5,7 @@ import sys
 import time
 import ThetaStarPlanner
 import BL_JPS
+import warthog
 
 # --- CONFIG ---
 IMG_PATH = "data/image.png"
@@ -14,7 +15,7 @@ RESOLUTION = 1.0  # 1 pixel = 1 cell, adjust if needed
 pygame.init()
 img_raw = pygame.image.load(IMG_PATH)
 # resize
-# img_raw = pygame.transform.scale(img_raw, (200, 150))  # Resize to fit window
+img_raw = pygame.transform.scale(img_raw, (2000, 1500))  # Resize to fit window
 # img_raw = pygame.transform.scale(img_raw, (400, 300))  # Resize to fit window
 img_height, img_width = img_raw.get_height(), img_raw.get_width()
 window_size = [min(800, img_width), min(600, img_height)]
@@ -164,10 +165,14 @@ while running:
             # plan_time = time_spent
 
             # use BL_JPS for testing
-            bljps = BL_JPS.BL_JPS()
-            result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
-            plan_time = result.time_spent
-            path = uncompress_bljps_path(result.path)
+            # bljps = BL_JPS.BL_JPS()
+            # result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
+            # plan_time = result.time_spent
+            # path = uncompress_bljps_path(result.path)
+
+            path = []
+            plan_time = 0.0
+            result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2")
         except Exception as e:
             print("Planning failed:", e)
             path = []

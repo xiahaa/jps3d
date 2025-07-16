@@ -5,6 +5,7 @@ import jps_planner_bindings
 import ThetaStarPlanner
 import BL_JPS
 from datetime import datetime
+import warthog
 
 # os.path.insert(0, os.path.abspath("."))
 
@@ -111,25 +112,29 @@ def run_test():
         # status, jps_path, time_spent = result[0], result[1], result[2]
 
         # use BL_JPS for testing
-        start = datetime.now()
-        bljps = BL_JPS.BL_JPS()
-        bljps.preProcessGrid(map_data, width=dim[1], height=dim[0])
-        sX = int((start_w[0] - origin[0]) // resolution)
-        sY = int((start_w[1] - origin[1]) // resolution)
-        gX = int((goal_w[0] - origin[0]) // resolution)
-        gY = int((goal_w[1] - origin[1]) // resolution)
-        try:
-            jps_path = bljps.findSolution(sX, sY, gX, gY)
-            time_spent = (datetime.now()-start).total_seconds() * 1000  # Convert to milliseconds
-        except Exception as e:
-            print(f"BL_JPS error: {e}")
-            jps_path = None
-        print("\nJPS Path:")
-        if jps_path:
-            for p in jps_path:
-                print(f"  ({p[0]:.2f}, {p[1]:.2f})")
-        else:
-            print("  No JPS path found.")
+        # start = datetime.now()
+        # bljps = BL_JPS.BL_JPS()
+        # bljps.preProcessGrid(map_data, width=dim[1], height=dim[0])
+        # sX = int((start_w[0] - origin[0]) // resolution)
+        # sY = int((start_w[1] - origin[1]) // resolution)
+        # gX = int((goal_w[0] - origin[0]) // resolution)
+        # gY = int((goal_w[1] - origin[1]) // resolution)
+        # try:
+        #     jps_path = bljps.findSolution(sX, sY, gX, gY)
+        #     time_spent = (datetime.now()-start).total_seconds() * 1000  # Convert to milliseconds
+        # except Exception as e:
+        #     print(f"BL_JPS error: {e}")
+        #     jps_path = None
+        # print("\nJPS Path:")
+        # if jps_path:
+        #     for p in jps_path:
+        #         print(f"  ({p[0]:.2f}, {p[1]:.2f})")
+        # else:
+        #     print("  No JPS path found.")
+
+        jps_path = []
+        time_spent = 0.0
+        result, jps_path, time_spent = warthog.plan_2d(origin, dim, map_data, start, goal, resolution, "jps+")
 
         print(f"\nTime spent in planning: {time_spent:.4f} seconds")
     except Exception as e:
@@ -143,6 +148,9 @@ def run_test_image():
     filename = "./data/image.png"
     print(f"Loading image from {filename}...")
     img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)  # Load as grayscale
+
+    # resize
+    img = cv2.resize(img, (2000, 1500))  # Resize to 1000x1000 pixels
 
     origin = [0,0]  # x, y of the map origin
     dim = [img.shape[1], img.shape[0]]  # width, height in pixels
@@ -225,11 +233,15 @@ def run_test_image():
         # except Exception as e:
             # print(f"BL_JPS error: {e}")
             # jps_path = None
-        bljps = BL_JPS.BL_JPS()
-        result = bljps.plan_2d(map_data, width=dim[0], height=dim[1], startX=start_w[0], startY=start_w[1], endX=goal_w[0], endY=goal_w[1], originX=origin[0], originY=origin[1], resolution=resolution)
-        plan_time = result.time_spent
-        jps_path = uncompress_bljps_path(result.path)
-        time_spent = result.time_spent
+        # bljps = BL_JPS.BL_JPS()
+        # result = bljps.plan_2d(map_data, width=dim[0], height=dim[1], startX=start_w[0], startY=start_w[1], endX=goal_w[0], endY=goal_w[1], originX=origin[0], originY=origin[1], resolution=resolution)
+        # plan_time = result.time_spent
+        # jps_path = uncompress_bljps_path(result.path)
+        # time_spent = result.time_spent
+
+        jps_path = []
+        time_spent = 0.0
+        result, jps_path, time_spent = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, resolution, "jps2")
 
         # show planning result using matplotlib
         import matplotlib.pyplot as plt

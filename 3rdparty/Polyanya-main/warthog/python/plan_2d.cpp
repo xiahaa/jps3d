@@ -46,7 +46,6 @@ warthog::plan_2d(std::vector<float> &origin, std::vector<int> &dim,
         std::cerr << "plan_2d: map_data size does not match dim" << std::endl;
         return 1;
     }
-
     warthog::timer mytimer;
     mytimer.start();
 
@@ -106,7 +105,7 @@ warthog::plan_2d(std::vector<float> &origin, std::vector<int> &dim,
     }
 
     mytimer.stop();
-    time_spent = mytimer.elapsed_time_micro();
+    time_spent = mytimer.elapsed_time_micro() / 1000.0; // Convert to milliseconds
 
     if (path_ids.empty())
     {
