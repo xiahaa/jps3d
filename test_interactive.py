@@ -167,17 +167,17 @@ while running:
             # plan_time = time_spent
 
             # use BL_JPS for testing
-            # bljps = BL_JPS.BL_JPS()
-            # result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
-            # plan_time = result.time_spent
-            # path = uncompress_bljps_path(result.path)
+            bljps = BL_JPS.BL_JPS()
+            result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
+            plan_time = result.time_spent
+            path = uncompress_bljps_path(result.path)
 
             # path = []
             # plan_time = 0.0
             # result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2") # jps, jps+, jps2, jps2+
 
-            ret, path, plan_time = AMRA.plan_2d(origin, dim, map_data, start, goal, 1)
-            print(path)
+            # ret, path, plan_time = AMRA.plan_2d(origin, dim, map_data, start, goal, 1)
+            # print(path)
         except Exception as e:
             print("Planning failed:", e)
             path = []
