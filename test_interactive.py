@@ -1,8 +1,10 @@
 import pygame
 import numpy as np
-import jps_planner_bindings
 import sys
 import time
+
+# algorithms
+import jps_planner_bindings
 import ThetaStarPlanner
 import BL_JPS
 import warthog
@@ -159,6 +161,7 @@ while running:
             # t1 = time.time()
             # path = [world_to_pixel(p) for p in result.path]
             # plan_time = result.time_spent #(t1 - t0) * 1000  # ms
+
             # result = ThetaStarPlanner.plan_2d(
             #     origin, dim, map_data, start_w, goal_w, RESOLUTION, True
             # )
@@ -167,14 +170,18 @@ while running:
             # plan_time = time_spent
 
             # use BL_JPS for testing
-            bljps = BL_JPS.BL_JPS()
-            result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
-            plan_time = result.time_spent
-            path = uncompress_bljps_path(result.path)
+            # bljps = BL_JPS.BL_JPS()
+            # result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
+            # plan_time = result.time_spent
+            # path = uncompress_bljps_path(result.path)
 
             # path = []
             # plan_time = 0.0
             # result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2") # jps, jps+, jps2, jps2+
+
+            ret, path, plan_time = RAstarBucket.plan_2d(
+                origin, dim, map_data, start_w, goal_w, 1
+            )
 
             # ret, path, plan_time = AMRA.plan_2d(origin, dim, map_data, start, goal, 1)
             # print(path)
