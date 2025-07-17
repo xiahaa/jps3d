@@ -30,3 +30,5 @@ nouse/
 *.jps+
 bljps_sub.cpython-310-x86_64-linux-gnu.so
 map.txt
+3rdparty/amra/*
+AMRA.cpython-310-x86_64-linux-gnu.so

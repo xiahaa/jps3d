@@ -6,6 +6,8 @@ import time
 import ThetaStarPlanner
 import BL_JPS
 import warthog
+import RAstarBucket
+import AMRA
 
 # --- CONFIG ---
 IMG_PATH = "data/image.png"
@@ -15,7 +17,7 @@ RESOLUTION = 1.0  # 1 pixel = 1 cell, adjust if needed
 pygame.init()
 img_raw = pygame.image.load(IMG_PATH)
 # resize
-img_raw = pygame.transform.scale(img_raw, (2000, 1500))  # Resize to fit window
+img_raw = pygame.transform.scale(img_raw, (1024, 1024))  # Resize to fit window
 # img_raw = pygame.transform.scale(img_raw, (400, 300))  # Resize to fit window
 img_height, img_width = img_raw.get_height(), img_raw.get_width()
 window_size = [min(800, img_width), min(600, img_height)]
@@ -170,9 +172,12 @@ while running:
             # plan_time = result.time_spent
             # path = uncompress_bljps_path(result.path)
 
-            path = []
-            plan_time = 0.0
-            result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2") # jps, jps+, jps2, jps2+
+            # path = []
+            # plan_time = 0.0
+            # result, path, plan_time = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, 1, "jps2") # jps, jps+, jps2, jps2+
+
+            ret, path, plan_time = AMRA.plan_2d(origin, dim, map_data, start, goal, 1)
+            print(path)
         except Exception as e:
             print("Planning failed:", e)
             path = []

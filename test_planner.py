@@ -6,6 +6,7 @@ import ThetaStarPlanner
 import BL_JPS
 from datetime import datetime
 import warthog
+import AMRA
 
 # os.path.insert(0, os.path.abspath("."))
 
@@ -150,9 +151,9 @@ def run_test_image():
     img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)  # Load as grayscale
 
     # resize
-    img = cv2.resize(img, (2000, 1500))  # Resize to 1000x1000 pixels
+    img = cv2.resize(img, (400, 300))  # Resize to 1000x1000 pixels
 
-    origin = [0,0]  # x, y of the map origin
+    origin = [0.0,0.0]  # x, y of the map origin
     dim = [img.shape[1], img.shape[0]]  # width, height in pixels
     resolution = 1  # meters per pixel (assumed)
 
@@ -241,7 +242,8 @@ def run_test_image():
 
         jps_path = []
         time_spent = 0.0
-        result, jps_path, time_spent = warthog.plan_2d(origin, dim, map_data, start_w, goal_w, resolution, "jps2")
+        result, jps_path, time_spent = AMRA.plan_2d(origin, dim, map_data, start_w, goal_w, resolution)
+        print(jps_path)
 
         # show planning result using matplotlib
         import matplotlib.pyplot as plt
