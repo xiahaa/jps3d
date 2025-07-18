@@ -59,3 +59,22 @@ See the LICENSE file if available.
 ## Contact
 
 For questions or contributions, please contact the project maintainer.
+
+
+# todo things
+
+## engineering
+1. https://github.com/Autodesk/Central64
+3. navmesh: navmesh lib + geom
+3. vg
+3. https://gppc.search-conference.org/
+
+## research track
+**learn probability map**
+1. https://scholar.google.com/scholar?start=0&hl=en&as_sdt=2005&sciodt=0,5&cites=1423572318423295749&scipsc=
+
+**learn CPD**
+
+## reference
+1. https://ojs.aaai.org/index.php/AIIDE/article/view/31882/34049
+2. https://github.com/ubco-db/database-pathfinding
