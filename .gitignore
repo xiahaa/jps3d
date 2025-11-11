@@ -11,7 +11,7 @@ nouse/
 *.o
 *.d
 
-3rdparty/Polyanya-main/gppc
+
 3rdparty/Polyanya-main/other
 3rdparty/Polyanya-main/README.md
 
@@ -32,3 +32,26 @@ bljps_sub.cpython-310-x86_64-linux-gnu.so
 map.txt
 3rdparty/amra/*
 AMRA.cpython-310-x86_64-linux-gnu.so
+*.so
+3rdparty/Polyanya-main/gppc/gppc-2013/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS2/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/ContractionHierarchies/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/NLevelSubgoalGraphs/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS_SubGoal_Exp/*.map
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS_SubGoal_Exp/*.map.scen
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS_SubGoal_Exp/BLJPS2.depend
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS_SubGoal_Exp/Makefile
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS_SubGoal_Exp/bin/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/BLJPS_SubGoal_Exp/lib/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_AStarBucketPriorityQueueEntry/Makefile
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_AStarBucketPriorityQueueEntry/ReadMe.txt
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_AStarBucketPriorityQueueEntry/lib/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_AStarBucketPriorityQueueEntry/test.py
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_AStarEntry/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_JPSPlus/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/Rabin_JPSPlusBucketPriorityQueueEntry/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/RelaxedAstar_SubgoalGraph-Fast_iroboapp/
+3rdparty/Polyanya-main/gppc/gppc-2014/scenarios/
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/RelaxedAstar_iroboapp/
+image.png
