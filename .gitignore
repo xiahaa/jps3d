@@ -66,3 +66,4 @@ first_move_matrix.npy
 3rdparty/Polyanya-main/gppc/gppc-2014/entries/FirstMoveCompression/extract_first_move_matrix
 __pycache__/generate_first_move_matrix.cpython-38.pyc
 extract_first_move_matrix
+data/map.map

@@ -67,16 +67,29 @@ py::array_t<int32_t> extract_first_move_matrix_cpp(
     int goal_y
 )
 {
+    // Check if preprocessed file exists
+    FILE *f = fopen(preprocessed_file.c_str(), "rb");
+    if (f == nullptr)
+    {
+        throw std::runtime_error("Preprocessed file does not exist: " + preprocessed_file);
+    }
+    fclose(f);
+
     // Load map
     std::vector<bool> mapData;
     int width, height;
     LoadMap(map_file.c_str(), mapData, width, height);
 
+    if (mapData.empty())
+    {
+        throw std::runtime_error("Failed to load map file: " + map_file);
+    }
+
     // Prepare search state
     void *state = PrepareForSearch(mapData, width, height, preprocessed_file.c_str());
     if (state == nullptr)
     {
-        throw std::runtime_error("Failed to load preprocessed data");
+        throw std::runtime_error("Failed to load preprocessed data from: " + preprocessed_file);
     }
 
     State *s = static_cast<State *>(state);
