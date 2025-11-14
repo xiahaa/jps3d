@@ -55,3 +55,7 @@ AMRA.cpython-310-x86_64-linux-gnu.so
 3rdparty/Polyanya-main/gppc/gppc-2014/scenarios/
 3rdparty/Polyanya-main/gppc/gppc-2014/entries/RelaxedAstar_iroboapp/
 image.png
+
+data/demo/*
+
+tests/demo_realtime_planning.py
