@@ -59,3 +59,10 @@ image.png
 data/demo/*
 
 tests/demo_realtime_planning.py
+first_move_matrix_comparison.png
+first_move_matrix_visualization.png
+first_move_comparison_results.json
+first_move_matrix.npy
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/FirstMoveCompression/extract_first_move_matrix
+__pycache__/generate_first_move_matrix.cpython-38.pyc
+extract_first_move_matrix
