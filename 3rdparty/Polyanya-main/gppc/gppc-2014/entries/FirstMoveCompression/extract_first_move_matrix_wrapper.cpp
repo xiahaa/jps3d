@@ -34,6 +34,7 @@ static void LoadMap(const char *fname, std::vector<bool> &map, int &width, int &
     if (f)
     {
         fscanf(f, "type octile\nheight %d\nwidth %d\nmap\n", &height, &width);
+        printf("height: %d, width: %d\n", height, width);
         map.resize(height * width);
         for (int y = 0; y < height; y++)
         {
@@ -61,20 +62,11 @@ static void LoadMap(const char *fname, std::vector<bool> &map, int &width, int &
  * @return 2D numpy array: -1 for obstacles, -2 for unreachable, direction code (0-7) for valid moves
  */
 py::array_t<int32_t> extract_first_move_matrix_cpp(
-    const std::string &preprocessed_file,
     const std::string &map_file,
     int goal_x,
     int goal_y
 )
 {
-    // Check if preprocessed file exists
-    FILE *f = fopen(preprocessed_file.c_str(), "rb");
-    if (f == nullptr)
-    {
-        throw std::runtime_error("Preprocessed file does not exist: " + preprocessed_file);
-    }
-    fclose(f);
-
     // Load map
     std::vector<bool> mapData;
     int width, height;
@@ -84,16 +76,15 @@ py::array_t<int32_t> extract_first_move_matrix_cpp(
     {
         throw std::runtime_error("Failed to load map file: " + map_file);
     }
+    printf("map_file: %s\n", map_file.c_str());
 
-    // Prepare search state
+    std::string preprocessed_file =  "./data/first_move_matrix_cpp.map";
+    printf("preprocessed_file: %s\n", preprocessed_file.c_str());
+
+    // PreprocessMap(mapData, width, height, preprocessed_file.c_str());
+
     void *state = PrepareForSearch(mapData, width, height, preprocessed_file.c_str());
-    if (state == nullptr)
-    {
-        throw std::runtime_error("Failed to load preprocessed data from: " + preprocessed_file);
-    }
-
     State *s = static_cast<State *>(state);
-
     // Create output matrix (same size as map, -1 for obstacles, -2 for unreachable, direction for others)
     // Use the same encoding as Python: -1=obstacle, -2=unreachable, 0-7=direction
     std::vector<int32_t> matrix_data(width * height, -2); // Initialize to unreachable
@@ -181,7 +172,6 @@ PYBIND11_MODULE(cpp_first_move_matrix, m)
 
     m.def("extract_first_move_matrix", &extract_first_move_matrix_cpp,
           "Extract first move matrix from C++ CPD",
-          py::arg("preprocessed_file"),
           py::arg("map_file"),
           py::arg("goal_x"),
           py::arg("goal_y"));
