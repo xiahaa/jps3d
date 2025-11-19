@@ -13,25 +13,27 @@ from typing import Tuple, List, Optional
 from collections import deque
 
 
-# Direction encoding for 4-connected grid
-# 0: North (up, -y), 1: South (down, +y), 2: East (right, +x), 3: West (left, -x)
-DIRECTIONS_4 = [
-    (0, -1),   # 0: North
-    (0, 1),    # 1: South
-    (1, 0),    # 2: East
+# Direction encoding matching C++ implementation from mapper.h
+# C++ uses: dx[] = {-1, 0, 1, -1, 1, -1, 0, 1}
+#           dy[] = {-1, -1, -1, 0, 0, 1, 1, 1}
+# Direction encoding for 8-connected grid (matching C++)
+DIRECTIONS_8 = [
+    (-1, -1),  # 0: Northwest
+    (0, -1),   # 1: North
+    (1, -1),   # 2: Northeast
     (-1, 0),   # 3: West
+    (1, 0),    # 4: East
+    (-1, 1),   # 5: Southwest
+    (0, 1),    # 6: South
+    (1, 1),    # 7: Southeast
 ]
 
-# Direction encoding for 8-connected grid
-DIRECTIONS_8 = [
-    (0, -1),   # 0: North
-    (0, 1),    # 1: South
-    (1, 0),    # 2: East
-    (-1, 0),   # 3: West
-    (1, -1),   # 4: Northeast
-    (-1, -1),  # 5: Northwest
-    (1, 1),    # 6: Southeast
-    (-1, 1),   # 7: Southwest
+# Direction encoding for 4-connected grid (subset of 8-connected)
+DIRECTIONS_4 = [
+    (0, -1),   # 0: North (maps to C++ dir 1)
+    (0, 1),    # 1: South (maps to C++ dir 6)
+    (1, 0),    # 2: East (maps to C++ dir 4)
+    (-1, 0),   # 3: West (maps to C++ dir 3)
 ]
 
 OBSTACLE_VALUE = -1
@@ -44,7 +46,8 @@ def compute_first_move_matrix_dijkstra(
     use_8_connected: bool = False
 ) -> np.ndarray:
     """
-    Compute first move matrix using Dijkstra's algorithm backwards from the goal.
+    Compute first move matrix using Dijkstra's algorithm matching C++ implementation.
+    Runs Dijkstra from each source node to the goal, similar to how C++ CPD works.
 
     Args:
         map_img: 2D numpy array where 0=free, >200=obstacle (or binary: 0=free, 1=obstacle)
@@ -53,7 +56,7 @@ def compute_first_move_matrix_dijkstra(
 
     Returns:
         2D numpy array of first move directions:
-        - Direction codes (0-3 for 4-connected, 0-7 for 8-connected)
+        - Direction codes (0-7 for 8-connected, matching C++ encoding)
         - OBSTACLE_VALUE (-1) for obstacle cells
         - UNREACHABLE_VALUE (-2) for unreachable cells
     """
@@ -74,59 +77,92 @@ def compute_first_move_matrix_dijkstra(
     if obstacle_mask[goal_y, goal_x]:
         return first_move_matrix
 
-    # Dijkstra backwards from goal
-    # We'll store (distance, y, x, first_move_direction)
-    # For the goal itself, we use a special value (e.g., 0 meaning "arrived")
-    pq = [(0, goal_y, goal_x, 0)]  # distance, y, x, first_move (0 for goal itself)
-    visited = np.zeros((height, width), dtype=bool)
-    distances = np.full((height, width), np.inf)
-    distances[goal_y, goal_x] = 0
-
     # For goal cell, mark as 0 (arrived)
     first_move_matrix[goal_y, goal_x] = 0
 
+    # Helper function to find opposite direction index
+    def get_opposite_direction(dir_idx):
+        """Get the opposite direction index for reversing a direction."""
+        # Mapping: 0<->7, 1<->6, 2<->5, 3<->4 (and vice versa for diagonals)
+        opposite_map = {0: 7, 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1, 7: 0}
+        return opposite_map.get(dir_idx, dir_idx)
+
+    # Helper function to check if a diagonal move is valid (corner checking like C++)
+    def is_valid_move(y, x, dx, dy, obstacle_mask):
+        """Check if move is valid, including corner checking for diagonals."""
+        ny, nx = y + dy, x + dx
+
+        # Check bounds
+        if nx < 0 or nx >= width or ny < 0 or ny >= height:
+            return False
+
+        # Check if target is obstacle
+        if obstacle_mask[ny, nx]:
+            return False
+
+        # For diagonal moves, check both intermediate cells (corner checking)
+        if dx != 0 and dy != 0:
+            # Check horizontal intermediate cell
+            if obstacle_mask[y, x + dx]:
+                return False
+            # Check vertical intermediate cell
+            if obstacle_mask[y + dy, x]:
+                return False
+
+        return True
+
+    # Run Dijkstra backwards from goal (more efficient than from each source)
+    # Track the first move direction for each node
+    pq = [(0, goal_y, goal_x)]  # distance, y, x
+    visited = np.zeros((height, width), dtype=bool)
+    distances = np.full((height, width), np.inf)
+    distances[goal_y, goal_x] = 0
+    first_move_from_node = {}  # Map (y, x) -> first move direction to goal
+
     while pq:
-        dist, y, x, first_move = heapq.heappop(pq)
+        dist, y, x = heapq.heappop(pq)
 
         if visited[y, x]:
             continue
         visited[y, x] = True
 
-        # Explore neighbors
+        # Explore neighbors (going backwards from goal)
         for dir_idx, (dx, dy) in enumerate(directions):
-            nx, ny = x + dx, y + dy
-
-            # Check bounds
-            if nx < 0 or nx >= width or ny < 0 or ny >= height:
+            if not is_valid_move(y, x, dx, dy, obstacle_mask):
                 continue
 
-            # Check if obstacle
-            if obstacle_mask[ny, nx]:
-                continue
+            ny, nx = y + dy, x + dx
 
-            # Check if already visited
             if visited[ny, nx]:
                 continue
 
             # Calculate new distance
-            # For 8-connected, diagonal moves cost sqrt(2), else 1
             move_cost = np.sqrt(2) if (dx != 0 and dy != 0) else 1.0
             new_dist = dist + move_cost
 
             # Update if we found a shorter path
             if new_dist < distances[ny, nx]:
                 distances[ny, nx] = new_dist
-                # The first move from (ny, nx) is the direction we came from
-                # But we need to reverse it: if we came from (y, x) to (ny, nx),
-                # the first move from (ny, nx) to goal is the opposite direction
-                # Actually, we're going backwards, so the first move from neighbor
-                # to goal is the direction we took to get to the neighbor
-                # Wait, let me reconsider...
-                # We're at (y, x), and we're exploring (ny, nx).
-                # From (ny, nx), to get to goal, we first move in direction (dx, dy)
-                # which is direction dir_idx
-                first_move_matrix[ny, nx] = dir_idx
-                heapq.heappush(pq, (new_dist, ny, nx, dir_idx))
+                # We're going backwards: from (y, x) we move in direction (dx, dy) to reach (ny, nx)
+                # So from (ny, nx), to get back to (y, x) and eventually to goal,
+                # we need to move in the opposite direction
+                # Actually wait - we're at (y, x) which is closer to goal, exploring (ny, nx) which is further
+                # From (ny, nx), the first move to goal is the direction towards (y, x)
+                # That direction is (-dx, -dy), which we need to find the index for
+                # But actually, since we're storing the direction from current node, and we want
+                # the direction from neighbor, we need the opposite
+                opposite_dir = get_opposite_direction(dir_idx)
+                first_move_from_node[(ny, nx)] = opposite_dir
+                heapq.heappush(pq, (new_dist, ny, nx))
+            elif new_dist == distances[ny, nx]:
+                # Equal cost path - keep the first valid direction (matching C++ behavior)
+                if (ny, nx) not in first_move_from_node:
+                    opposite_dir = get_opposite_direction(dir_idx)
+                    first_move_from_node[(ny, nx)] = opposite_dir
+
+    # Set first move matrix from the computed first moves
+    for (y, x), dir_idx in first_move_from_node.items():
+        first_move_matrix[y, x] = dir_idx
 
     return first_move_matrix
 

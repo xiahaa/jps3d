@@ -67,3 +67,4 @@ first_move_matrix.npy
 __pycache__/generate_first_move_matrix.cpython-38.pyc
 extract_first_move_matrix
 data/map.map
+data/first_move_matrix*
