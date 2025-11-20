@@ -25,7 +25,12 @@ ext_modules = [
         include_dirs=[
             this_dir,
             pybind11.get_include(),
+            '/usr/include/boost',
         ],
+        library_dirs=[
+            '/usr/lib/x86_64-linux-gnu',
+        ],
+        libraries=['boost_filesystem', 'boost_system'],
         language='c++',
         cxx_std=11,
         extra_compile_args=['-O3', '-DNDEBUG'],

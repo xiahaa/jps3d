@@ -10,6 +10,8 @@
 #include <string>
 #include <stdexcept>
 #include <cstdio>
+// include boost/filesystem.hpp
+#include <boost/filesystem.hpp>
 #include "Entry.h"
 #include "cpd.h"
 #include "mapper.h"
@@ -62,6 +64,7 @@ static void LoadMap(const char *fname, std::vector<bool> &map, int &width, int &
  * @return 2D numpy array: -1 for obstacles, -2 for unreachable, direction code (0-7) for valid moves
  */
 py::array_t<int32_t> extract_first_move_matrix_cpp(
+    const std::string &preprocessed_file,
     const std::string &map_file,
     int goal_x,
     int goal_y
@@ -78,9 +81,15 @@ py::array_t<int32_t> extract_first_move_matrix_cpp(
     }
     printf("map_file: %s\n", map_file.c_str());
 
-    std::string preprocessed_file =  "./data/first_move_matrix_cpp.map";
-    printf("preprocessed_file: %s\n", preprocessed_file.c_str());
+    // check if the preprocessed file exists
+    if (!boost::filesystem::exists(preprocessed_file))
+    {
+        // if not exists, preprocess the map
+        PreprocessMap(mapData, width, height, preprocessed_file.c_str());
+    }
 
+    // std::string preprocessed_file =  "./data/first_move_matrix_cpp.map";
+    // printf("preprocessed_file: %s\n", preprocessed_file.c_str());
     // PreprocessMap(mapData, width, height, preprocessed_file.c_str());
 
     void *state = PrepareForSearch(mapData, width, height, preprocessed_file.c_str());
@@ -172,6 +181,7 @@ PYBIND11_MODULE(cpp_first_move_matrix, m)
 
     m.def("extract_first_move_matrix", &extract_first_move_matrix_cpp,
           "Extract first move matrix from C++ CPD",
+          py::arg("preprocessed_file"),
           py::arg("map_file"),
           py::arg("goal_x"),
           py::arg("goal_y"));
