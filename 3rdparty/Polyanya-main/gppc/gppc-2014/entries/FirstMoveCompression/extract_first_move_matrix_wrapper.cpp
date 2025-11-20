@@ -36,7 +36,7 @@ static void LoadMap(const char *fname, std::vector<bool> &map, int &width, int &
     if (f)
     {
         fscanf(f, "type octile\nheight %d\nwidth %d\nmap\n", &height, &width);
-        printf("height: %d, width: %d\n", height, width);
+        // printf("height: %d, width: %d\n", height, width);
         map.resize(height * width);
         for (int y = 0; y < height; y++)
         {
@@ -79,7 +79,7 @@ py::array_t<int32_t> extract_first_move_matrix_cpp(
     {
         throw std::runtime_error("Failed to load map file: " + map_file);
     }
-    printf("map_file: %s\n", map_file.c_str());
+    // printf("map_file: %s\n", map_file.c_str());
 
     // check if the preprocessed file exists
     if (!boost::filesystem::exists(preprocessed_file))

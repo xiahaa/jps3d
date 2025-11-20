@@ -40,7 +40,7 @@ void PreprocessMap(std::vector<bool> &bits, int width, int height, const char *f
 	#ifndef USE_CUT_ORDER
 	NodeOrdering order = compute_real_dfs_order(extract_graph(mapper));
 	#else
-	NodeOrdering order = compute_cut_order(extract_graph(mapper), prefer_zero_cut(balanced_min_cut));	
+	NodeOrdering order = compute_cut_order(extract_graph(mapper), prefer_zero_cut(balanced_min_cut));
 	#endif
 	mapper.reorder(order);
 
@@ -50,7 +50,7 @@ void PreprocessMap(std::vector<bool> &bits, int width, int height, const char *f
 	CPD cpd;
 	{
 		AdjGraph g(extract_graph(mapper));
-		
+
 		{
 			Dijkstra dij(g);
 			Timer t;
@@ -88,7 +88,7 @@ void PreprocessMap(std::vector<bool> &bits, int width, int height, const char *f
 			Dijkstra thread_dij(thread_adj_g);
 			for(int source_node=node_begin; source_node < node_end; ++source_node){
 				thread_cpd[thread_id].append_row(source_node, thread_dij.run(source_node));
-				#pragma omp critical 
+				#pragma omp critical
 				{
 					++progress;
 					if(progress % (g.node_count()/10) == 0){
@@ -123,9 +123,9 @@ struct State{
 
 void *PrepareForSearch(std::vector<bool> &bits, int w, int h, const char *filename)
 {
-	printf("Loading preprocessing data\n");
+	// printf("Loading preprocessing data\n");
 	State*state = new State;
-	
+
 	state->mapper = Mapper(bits, w, h);
 
 	FILE*f = fopen(filename, "rb");
@@ -139,7 +139,7 @@ void *PrepareForSearch(std::vector<bool> &bits, int w, int h, const char *filena
 	state->graph = AdjGraph(extract_graph(state->mapper));
 	state->current_node = -1;
 
-	printf("Loading done\n");
+	// printf("Loading done\n");
 
 
 	return state;
@@ -191,10 +191,9 @@ bool GetPath(void *data, xyLoc s, xyLoc t, std::vector<xyLoc> &path)
 		if(current_node == target_node)
 			break;
 		first_move = state->cpd.get_first_move(current_node, target_node);
-		
+
 	}
 	path.push_back(t);
 	return true;
 }
 #endif
-

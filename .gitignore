@@ -68,3 +68,4 @@ __pycache__/generate_first_move_matrix.cpython-38.pyc
 extract_first_move_matrix
 data/map.map
 data/first_move_matrix*
+3rdparty/Polyanya-main/gppc/gppc-2014/entries/FirstMoveCompression/cpp_first_move_matrix.egg-info/*
