@@ -88,121 +88,40 @@ def get_all_free_cells(map_data: np.ndarray) -> List[Tuple[int, int]]:
     return free_cells
 
 
-def matrix_to_image(matrix: np.ndarray) -> np.ndarray:
+def matrix_to_frame(matrix: np.ndarray) -> np.ndarray:
     """
-    Convert first move matrix to an image frame.
+    Convert first move matrix to a single-channel frame for compression.
 
-    Encoding:
-    - Obstacle (-1): White (255, 255, 255)
-    - Unreachable (-2): Blue (0, 0, 255)
-    - Direction 0-7: Use color mapping
-    - Direction 8-15: Extended colors (if needed)
-
-    Returns:
-        3-channel BGR image (height, width, 3) as uint8
+    Encoding (uint8):
+    - 0: Obstacle (-1)
+    - 1: Unreachable (-2)
+    - 2-17: Valid directions (0-15) mapped to value + 2
     """
-    height, width = matrix.shape
-    image = np.zeros((height, width, 3), dtype=np.uint8)
+    frame = np.zeros(matrix.shape, dtype=np.uint8)
+    frame[matrix == -1] = 0  # Obstacles
+    frame[matrix == -2] = 1  # Unreachable
 
-    # Color mapping for directions 0-7
-    direction_colors = [
-        (255, 128, 0),   # 0: Orange
-        (255, 255, 0),   # 1: Yellow
-        (128, 255, 0),   # 2: Lime
-        (0, 255, 0),     # 3: Green
-        (0, 255, 128),   # 4: Teal
-        (0, 255, 255),   # 5: Cyan
-        (0, 128, 255),   # 6: Light Blue
-        (255, 0, 128),   # 7: Magenta
-    ]
-
-    # Extended colors for directions 8-15 (if needed)
-    extended_colors = [
-        (128, 0, 255),   # 8: Purple
-        (255, 0, 0),     # 9: Red
-        (128, 128, 128), # 10: Gray
-        (192, 192, 192), # 11: Light Gray
-        (64, 64, 64),    # 12: Dark Gray
-        (255, 192, 128), # 13: Peach
-        (128, 255, 192), # 14: Mint
-        (192, 128, 255), # 15: Lavender
-    ]
-
-    # Obstacles: white
-    obstacle_mask = (matrix == -1)
-    image[obstacle_mask] = [255, 255, 255]
-
-    # Unreachable: blue
-    unreachable_mask = (matrix == -2)
-    image[unreachable_mask] = [255, 0, 0]  # BGR format
-
-    # Valid directions
-    for dir_val in range(16):
-        if dir_val < 8:
-            color = direction_colors[dir_val]
-        else:
-            color = extended_colors[dir_val - 8]
-
-        dir_mask = (matrix == dir_val)
-        image[dir_mask] = [color[2], color[1], color[0]]  # RGB to BGR
-
-    return image
+    valid_mask = matrix >= 0
+    frame[valid_mask] = matrix[valid_mask].astype(np.uint8) + 2
+    return frame
 
 
-def image_to_matrix(image: np.ndarray) -> np.ndarray:
+def frame_to_matrix(frame: np.ndarray) -> np.ndarray:
     """
-    Convert image frame back to first move matrix.
+    Convert single-channel frame back to first move matrix.
 
-    This is the inverse of matrix_to_image.
+    This is the inverse of matrix_to_frame.
     """
-    height, width = image.shape[:2]
-    matrix = np.full((height, width), -2, dtype=np.int32)
+    if frame.ndim == 3:
+        # Convert color frame to grayscale
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # Color mapping (BGR format)
-    direction_colors_bgr = [
-        [0, 128, 255],   # 0: Orange
-        [0, 255, 255],   # 1: Yellow
-        [0, 255, 128],   # 2: Lime
-        [0, 255, 0],     # 3: Green
-        [128, 255, 0],   # 4: Teal
-        [255, 255, 0],   # 5: Cyan
-        [255, 128, 0],   # 6: Light Blue
-        [128, 0, 255],   # 7: Magenta
-    ]
+    matrix = np.full(frame.shape, -2, dtype=np.int32)
+    matrix[frame == 0] = -1  # Obstacles
+    matrix[frame == 1] = -2  # Unreachable
 
-    extended_colors_bgr = [
-        [255, 0, 128],   # 8: Purple
-        [0, 0, 255],     # 9: Red
-        [128, 128, 128], # 10: Gray
-        [192, 192, 192], # 11: Light Gray
-        [64, 64, 64],    # 12: Dark Gray
-        [128, 192, 255], # 13: Peach
-        [192, 255, 128], # 14: Mint
-        [255, 128, 192], # 15: Lavender
-    ]
-
-    # Obstacles: white (255, 255, 255)
-    white_mask = np.all(image == [255, 255, 255], axis=2)
-    matrix[white_mask] = -1
-
-    # Unreachable: blue (255, 0, 0)
-    blue_mask = np.all(image == [255, 0, 0], axis=2)
-    matrix[blue_mask] = -2
-
-    # Directions: match colors with tolerance
-    tolerance = 5
-    for dir_val, color in enumerate(direction_colors_bgr):
-        color_array = np.array(color)
-        diff = np.abs(image.astype(int) - color_array)
-        dir_mask = np.all(diff <= tolerance, axis=2) & (matrix == -2)
-        matrix[dir_mask] = dir_val
-
-    for dir_val, color in enumerate(extended_colors_bgr, start=8):
-        color_array = np.array(color)
-        diff = np.abs(image.astype(int) - color_array)
-        dir_mask = np.all(diff <= tolerance, axis=2) & (matrix == -2)
-        matrix[dir_mask] = dir_val
-
+    valid_mask = frame >= 2
+    matrix[valid_mask] = frame[valid_mask].astype(np.int32) - 2
     return matrix
 
 
@@ -279,16 +198,16 @@ def generate_all_first_move_matrices(
                             matrix = np.array(matrix, dtype=np.int32)
 
                         # Convert to image and write immediately to disk
-                        image = matrix_to_image(matrix)
+                        frame = matrix_to_frame(matrix)
                         frame_path = os.path.join(frames_dir, f"frame_{frame_idx:06d}.png")
-                        cv2.imwrite(frame_path, image)
+                        cv2.imwrite(frame_path, frame)
 
                         processed_goals.append((goal_x, goal_y))
                         frame_idx += 1
 
                         # Free memory
                         del matrix
-                        del image
+                        del frame
 
                 # Clear batch from memory
                 del matrices
@@ -307,15 +226,15 @@ def generate_all_first_move_matrices(
                         if not isinstance(matrix, np.ndarray):
                             matrix = np.array(matrix, dtype=np.int32)
 
-                        image = matrix_to_image(matrix)
+                        frame = matrix_to_frame(matrix)
                         frame_path = os.path.join(frames_dir, f"frame_{frame_idx:06d}.png")
-                        cv2.imwrite(frame_path, image)
+                        cv2.imwrite(frame_path, frame)
 
                         processed_goals.append((goal_x, goal_y))
                         frame_idx += 1
 
                         del matrix
-                        del image
+                        del frame
                     except Exception as e2:
                         print(f"Error generating matrix for goal ({goal_x}, {goal_y}): {e2}")
                         continue
@@ -347,15 +266,15 @@ def generate_all_first_move_matrices(
                     matrix = compute_first_move_matrix_dijkstra(map_img, (goal_x, goal_y), True)
 
                 # Convert to image and write immediately to disk
-                image = matrix_to_image(matrix)
+                frame = matrix_to_frame(matrix)
                 frame_path = os.path.join(frames_dir, f"frame_{frame_idx:06d}.png")
-                cv2.imwrite(frame_path, image)
+                cv2.imwrite(frame_path, frame)
 
                 processed_goals.append((goal_x, goal_y))
 
                 # Free memory
                 del matrix
-                del image
+                del frame
 
             except Exception as e:
                 print(f"Error generating matrix for goal ({goal_x}, {goal_y}): {e}")
@@ -368,7 +287,7 @@ def create_video_from_frames(
     frames_dir: str,
     goal_order: List[Tuple[int, int]],
     output_video_path: str,
-    fps: int = 1
+    fps: int = 10
 ) -> bool:
     """
     Create MPEG video from frame images on disk.
@@ -415,8 +334,8 @@ def create_video_from_frames(
             '-i', os.path.join(frames_dir, 'frame_%06d.png'),
             '-c:v', 'libx264',  # H.264 codec
             '-preset', 'slow',  # Better compression
-            '-crf', '18',  # Higher quality (lower = better quality, larger file)
-            '-pix_fmt', 'yuv420p',  # Compatibility
+            '-crf', '0',  # Higher quality (lower = better quality, larger file)
+            '-pix_fmt', 'gray',  # Single channel video
             output_video_path
         ]
 
@@ -509,8 +428,8 @@ def verify_correctness(
                 break
 
             # Load original and decoded frames
-            original_image = cv2.imread(str(original_frame_files[i]))
-            decoded_image = cv2.imread(frame_files[i])
+            original_image = cv2.imread(str(original_frame_files[i]), cv2.IMREAD_UNCHANGED)
+            decoded_image = cv2.imread(frame_files[i], cv2.IMREAD_UNCHANGED)
 
             if original_image is None or decoded_image is None:
                 errors.append({
@@ -520,8 +439,8 @@ def verify_correctness(
                 continue
 
             # Convert to matrices for comparison
-            original_matrix = image_to_matrix(original_image)
-            decoded_matrix = image_to_matrix(decoded_image)
+            original_matrix = frame_to_matrix(original_image)
+            decoded_matrix = frame_to_matrix(decoded_image)
 
             # Compare
             if original_matrix.shape != decoded_matrix.shape:
@@ -587,6 +506,8 @@ def main():
                         help='Keep frame images after video creation (default: delete)')
     parser.add_argument('--batch-size', type=int, default=100,
                         help='Batch size for batch extraction (default: 100)')
+    parser.add_argument('--fps', type=int, default=30,
+                        help='Frames per second for the video (default: 30)')
 
     args = parser.parse_args()
 
@@ -636,7 +557,7 @@ def main():
     # Create video from frames
     if not args.skip_generation or not os.path.exists(args.output_video):
         print(f"\nCreating video: {args.output_video}")
-        success = create_video_from_frames(args.frames_dir, goal_order, args.output_video)
+        success = create_video_from_frames(args.frames_dir, goal_order, args.output_video, fps=args.fps)
         if not success:
             print("Failed to create video")
             return 1
@@ -651,12 +572,12 @@ def main():
     # Estimate from first frame if available, or use map dimensions
     frame_files = sorted(Path(args.frames_dir).glob('frame_*.png'))
     if frame_files:
-        sample_image = cv2.imread(str(frame_files[0]))
+        sample_image = cv2.imread(str(frame_files[0]), cv2.IMREAD_UNCHANGED)
         if sample_image is not None:
-            height, width = sample_image.shape[:2]
-            uncompressed_size = len(goal_order) * height * width * 4  # int32 = 4 bytes
+            frame_height, frame_width = sample_image.shape[:2]
         else:
-            uncompressed_size = len(goal_order) * height * width * 4
+            frame_height, frame_width = height, width
+        uncompressed_size = len(goal_order) * frame_height * frame_width * 4  # int32 = 4 bytes
     else:
         uncompressed_size = len(goal_order) * height * width * 4 if goal_order else 0
 

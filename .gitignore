@@ -69,3 +69,8 @@ extract_first_move_matrix
 data/map.map
 data/first_move_matrix*
 3rdparty/Polyanya-main/gppc/gppc-2014/entries/FirstMoveCompression/cpp_first_move_matrix.egg-info/*
+data/first_move_frames/*
+data/first_move_matrices_mapping.json
+data/first_move_matrices.mp4
+data/first_move_matrices_results.json
+__pycache__/test_video_compression.cpython-38.pyc
