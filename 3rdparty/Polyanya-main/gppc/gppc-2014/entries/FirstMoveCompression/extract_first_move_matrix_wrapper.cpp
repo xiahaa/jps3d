@@ -54,6 +54,9 @@ static void LoadMap(const char *fname, std::vector<bool> &map, int &width, int &
     }
 }
 
+
+
+
 /**
  * Extract first move matrix from C++ CPD for a given goal.
  *
@@ -175,6 +178,151 @@ py::array_t<int32_t> extract_first_move_matrix_cpp(
     return result;
 }
 
+/**
+ * Extract multiple first move matrices from C++ CPD for a list of goals.
+ * This is more efficient than calling extract_first_move_matrix_cpp multiple times
+ * because it loads the state once and reuses it.
+ *
+ * @param preprocessed_file Path to preprocessed C++ data file
+ * @param map_file Path to .map file
+ * @param goals List of (goal_x, goal_y) tuples
+ * @return List of 2D numpy arrays: -1 for obstacles, -2 for unreachable, direction code (0-7) for valid moves
+ */
+std::vector<py::array_t<int32_t>> extract_first_move_matrices_cpp(
+    const std::string &preprocessed_file,
+    const std::string &map_file,
+    const std::vector<std::pair<int, int>> &goals
+)
+{
+    // Load map
+    std::vector<bool> mapData;
+    int width, height;
+    LoadMap(map_file.c_str(), mapData, width, height);
+
+    if (mapData.empty())
+    {
+        throw std::runtime_error("Failed to load map file: " + map_file);
+    }
+
+    // check if the preprocessed file exists
+    if (!boost::filesystem::exists(preprocessed_file))
+    {
+        // if not exists, preprocess the map
+        PreprocessMap(mapData, width, height, preprocessed_file.c_str());
+    }
+
+    // Load state once (shared for all goals)
+    void *state = PrepareForSearch(mapData, width, height, preprocessed_file.c_str());
+    State *s = static_cast<State *>(state);
+
+    // Prepare result vector
+    std::vector<py::array_t<int32_t>> results;
+    results.reserve(goals.size());
+
+    // Process each goal
+    for (const auto &goal : goals)
+    {
+        int goal_x = goal.first;
+        int goal_y = goal.second;
+
+        // Create output matrix (same size as map, -1 for obstacles, -2 for unreachable, direction for others)
+        std::vector<int32_t> matrix_data(width * height, -2); // Initialize to unreachable
+
+        // Mark obstacles
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (!mapData[y * width + x])
+                {
+                    matrix_data[y * width + x] = -1; // Obstacle
+                }
+            }
+        }
+
+        // Get goal node
+        xyLoc goal_loc;
+        goal_loc.x = goal_x;
+        goal_loc.y = goal_y;
+        int goal_node = s->mapper(goal_loc);
+
+        if (goal_node == -1)
+        {
+            // Invalid goal - return matrix with all unreachable
+            py::array_t<int32_t> result({height, width});
+            auto result_buf = result.mutable_unchecked<2>();
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (!mapData[y * width + x])
+                    {
+                        result_buf(y, x) = -1; // Obstacle
+                    }
+                    else
+                    {
+                        result_buf(y, x) = -2; // Unreachable (invalid goal)
+                    }
+                }
+            }
+            results.push_back(result);
+            continue;
+        }
+
+        // For each free cell, get first move to goal
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                if (!mapData[y * width + x])
+                    continue; // Skip obstacles
+
+                xyLoc start_loc;
+                start_loc.x = x;
+                start_loc.y = y;
+                int start_node = s->mapper(start_loc);
+
+                if (start_node == -1)
+                    continue; // Should not happen for free cells
+
+                if (start_node == goal_node)
+                {
+                    matrix_data[y * width + x] = 0; // At goal
+                    continue;
+                }
+
+                // Get first move from CPD
+                unsigned char first_move = s->cpd.get_first_move(start_node, goal_node);
+
+                if (first_move == 0xF)
+                {
+                    matrix_data[y * width + x] = -2; // Unreachable
+                }
+                else
+                {
+                    matrix_data[y * width + x] = first_move;
+                }
+            }
+        }
+
+        // Create numpy array (height x width, row-major order like Python)
+        py::array_t<int32_t> result({height, width});
+        auto result_buf = result.mutable_unchecked<2>();
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                result_buf(y, x) = matrix_data[y * width + x];
+            }
+        }
+
+        results.push_back(result);
+    }
+
+    return results;
+}
+
 PYBIND11_MODULE(cpp_first_move_matrix, m)
 {
     m.doc() = "C++ First Move Matrix Extraction using pybind11";
@@ -185,4 +333,10 @@ PYBIND11_MODULE(cpp_first_move_matrix, m)
           py::arg("map_file"),
           py::arg("goal_x"),
           py::arg("goal_y"));
+
+    m.def("extract_first_move_matrices", &extract_first_move_matrices_cpp,
+          "Extract multiple first move matrices from C++ CPD for a list of goals",
+          py::arg("preprocessed_file"),
+          py::arg("map_file"),
+          py::arg("goals"));
 }
