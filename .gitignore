@@ -75,3 +75,4 @@ data/first_move_matrices.mp4
 data/first_move_matrices_results.json
 __pycache__/test_video_compression.cpython-38.pyc
 simple_benchmark_result.png
+3rdparty/silas-os-python/
