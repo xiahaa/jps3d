@@ -11,6 +11,20 @@ import BL_JPS
 # import RAstarBucket
 # import AMRA
 
+# Import silas
+from pathlib import Path
+SILAS_OS_PATH = Path('.').resolve() / '3rdparty' / 'silas-os-python'
+sys.path.append(str(SILAS_OS_PATH))
+try:
+    # from silas.os.kernel.tspatial_processing.planning.single_agent_planning.single_agent_planning_2d import single_agent_planning_2d
+    from silas.os.kernel.tspatial_processing.planning.astar.astar_2d import AStar
+
+    SILAS_AVAILABLE = True
+    print("✓ silas single_agent_planning_2d imported successfully")
+except ImportError as e:
+    SILAS_AVAILABLE = False
+    print(f"✗ silas import failed: {e}")
+
 # --- CONFIG ---
 IMG_PATH = "data/image.png"
 RESOLUTION = 1.0  # 1 pixel = 1 cell, adjust if needed
@@ -154,13 +168,14 @@ while running:
         start_w = pixel_to_world(start)
         goal_w = pixel_to_world(goal)
         try:
-            # t0 = time.time()
-            # result = jps_planner_bindings.plan_2d(
-            #     origin, dim, map_data, start_w, goal_w, RESOLUTION, True
-            # )
-            # t1 = time.time()
-            # path = [world_to_pixel(p) for p in result.path]
-            # plan_time = result.time_spent #(t1 - t0) * 1000  # ms
+            t0 = time.time()
+            result = jps_planner_bindings.plan_2d(
+                origin, dim, map_data, start_w, goal_w, RESOLUTION, True
+            )
+            t1 = time.time()
+            path = [world_to_pixel(p) for p in result.path]
+            plan_time = result.time_spent #(t1 - t0) * 1000  # ms
+            print(f"JPS Plan time: {plan_time:.2f} milliseconds")
 
             # result = ThetaStarPlanner.plan_2d(
             #     origin, dim, map_data, start_w, goal_w, RESOLUTION, True
@@ -171,9 +186,29 @@ while running:
 
             # use BL_JPS for testing
             bljps = BL_JPS.BL_JPS()
+            # start_time = time.perf_counter()
             result = bljps.plan_2d(map_data, width=int(dim[0]), height=int(dim[1]), startX=int(start_w[0]), startY=int(start_w[1]), endX=int(goal_w[0]), endY=int(goal_w[1]), originX=int(origin[0]), originY=int(origin[1]), resolution=1)
+            # end_time = time.perf_counter()
             plan_time = result.time_spent
             path = uncompress_bljps_path(result.path)
+            print(f"BL_JPS Plan time: {plan_time:.2f} milliseconds")
+
+            # Convert to format expected by planner (row, col)
+            start_rc = (int(start_w[0]), int(start_w[1]))  # (y, x) -> (row, col)
+            goal_rc = (int(goal_w[0]), int(goal_w[1]))      # (y, x) -> (row, col)
+
+            # Convert image to boolean grid (True = obstacle)
+            grid = gray >= 128
+
+            # Run planning with timing
+            start_time = time.perf_counter()
+            # path = single_agent_planning_2d(grid, start_rc, goal_rc, scale_factor=1)
+            astar = AStar(np.invert(grid.astype(bool)))
+            path = astar.search(start_rc, goal_rc)
+            end_time = time.perf_counter()
+            plan_time = (end_time - start_time) * 1000
+            # to milliseconds
+            print(f"SILAS Plan time: {plan_time:.2f} milliseconds")
 
             # path = []
             # plan_time = 0.0
