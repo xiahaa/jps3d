@@ -323,6 +323,61 @@ std::vector<py::array_t<int32_t>> extract_first_move_matrices_cpp(
     return results;
 }
 
+py::array_t<int32_t> get_path_cpp(const std::string &preprocessed_file, const std::string &map_file, int start_x, int start_y, int goal_x, int goal_y)
+{
+    // Load map
+    std::vector<bool> mapData;
+    int width, height;
+    LoadMap(map_file.c_str(), mapData, width, height);
+
+    if (mapData.empty())
+    {
+        throw std::runtime_error("Failed to load map file: " + map_file);
+    }
+    // printf("map_file: %s\n", map_file.c_str());
+
+    // check if the preprocessed file exists
+    if (!boost::filesystem::exists(preprocessed_file))
+    {
+        // if not exists, preprocess the map
+        PreprocessMap(mapData, width, height, preprocessed_file.c_str());
+    }
+
+    // std::string preprocessed_file =  "./data/first_move_matrix_cpp.map";
+    // printf("preprocessed_file: %s\n", preprocessed_file.c_str());
+    // PreprocessMap(mapData, width, height, preprocessed_file.c_str());
+
+    void *state = PrepareForSearch(mapData, width, height, preprocessed_file.c_str());
+    State *s = static_cast<State *>(state);
+
+    xyLoc start_loc;
+    start_loc.x = static_cast<int16_t>(start_x);
+    start_loc.y = static_cast<int16_t>(start_y);
+    xyLoc goal_loc;
+    goal_loc.x = static_cast<int16_t>(goal_x);
+    goal_loc.y = static_cast<int16_t>(goal_y);
+    std::vector<xyLoc> path;
+    GetPath(state, start_loc, goal_loc, path);
+
+    // convert path to numpy array (N x 2)
+    py::ssize_t path_size = static_cast<py::ssize_t>(path.size());
+    // Define the dimensions of the array
+    std::vector<py::ssize_t> shape = {static_cast<py::ssize_t>(path_size), static_cast<py::ssize_t>(2)};
+    py::array_t<int32_t> result(shape);
+    auto result_buf = result.mutable_unchecked<2>();
+    for (py::ssize_t i = 0; i < path_size; i++)
+    {
+        result_buf(i, 0) = static_cast<int32_t>(path[i].x);
+        result_buf(i, 1) = static_cast<int32_t>(path[i].y);
+    }
+
+    // Clean up state
+    delete s;
+
+    return result;
+}
+
+
 PYBIND11_MODULE(cpp_first_move_matrix, m)
 {
     m.doc() = "C++ First Move Matrix Extraction using pybind11";
@@ -339,4 +394,13 @@ PYBIND11_MODULE(cpp_first_move_matrix, m)
           py::arg("preprocessed_file"),
           py::arg("map_file"),
           py::arg("goals"));
+
+    m.def("get_path", &get_path_cpp,
+          "Get path from C++ CPD",
+          py::arg("preprocessed_file"),
+          py::arg("map_file"),
+          py::arg("start_x"),
+          py::arg("start_y"),
+          py::arg("goal_x"),
+          py::arg("goal_y"));
 }
