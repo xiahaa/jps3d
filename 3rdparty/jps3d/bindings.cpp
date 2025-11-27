@@ -18,7 +18,7 @@ namespace py = pybind11;
 
 // Helper struct to make returning multiple values (the two paths) cleaner.
 // Pybind11 can automatically convert this struct to a Python tuple or a custom Python object.
-struct PlanResult {
+struct JPS3DPlanResult {
     std::vector<std::vector<double>> path;
     double time_spent; // Time spent in seconds
     // We could also include other results like planning time or validity if needed.
@@ -26,7 +26,7 @@ struct PlanResult {
 
 // Wrapper function that calls the original plan_2d and returns the paths.
 // This is a common pattern when the C++ function modifies arguments by reference to return values.
-PlanResult plan_2d_wrapper(const std::vector<float> &origin,
+JPS3DPlanResult plan_2d_wrapper(const std::vector<float> &origin,
                            const std::vector<int> &dim,
                            const std::vector<signed char> &map_data, // Renamed to avoid conflict if map is a global
                            const std::vector<float> &start,
@@ -57,11 +57,11 @@ PlanResult plan_2d_wrapper(const std::vector<float> &origin,
 PYBIND11_MODULE(jps_planner_bindings, m) {
     m.doc() = "Pybind11 bindings for JPS 2D planner";
 
-    // Define the PlanResult struct for Python
-    py::class_<PlanResult>(m, "PlanResult")
+    // Define the JPS3DPlanResult struct for Python
+    py::class_<JPS3DPlanResult>(m, "JPS3DPlanResult")
         .def(py::init<>())
-        .def_readwrite("path", &PlanResult::path)
-        .def_readwrite("time_spent", &PlanResult::time_spent);
+        .def_readwrite("path", &JPS3DPlanResult::path)
+        .def_readwrite("time_spent", &JPS3DPlanResult::time_spent);
 
     // Expose the wrapper function to Python
     m.def("plan_2d", &plan_2d_wrapper, "Plans a 2D path using JPS and A*",

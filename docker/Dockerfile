@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for building BLJPS_Python and jps3d shared libraries
-FROM idea-laser.tencentcloudcr.com/public/python:3.10.6 as builder
+FROM idea-laser.tencentcloudcr.com/public/python:3.10.6 AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -24,19 +24,38 @@ RUN pip install --no-cache-dir \
 # Set working directory
 WORKDIR /workspace
 
+# Debug: Check Python configuration and fix headers
+RUN echo "=== Python Configuration Debug ===" && \
+    echo "Python executable: $(which python3)" && \
+    echo "Python version: $(python3 --version)" && \
+    echo "Python include dir: $(python3 -c 'import sysconfig; print(sysconfig.get_path("include"))')" && \
+    echo "Python library: $(python3 -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"), sysconfig.get_config_var("LDLIBRARY"))')" && \
+    echo "Checking for python.h..." && \
+    find /usr -name "python.h" 2>/dev/null | head -5 && \
+    echo "Creating symlink for python headers if needed..." && \
+    PYTHON_INCLUDE=$(python3 -c 'import sysconfig; print(sysconfig.get_path("include"))') && \
+    if [ ! -f "$PYTHON_INCLUDE/python.h" ] && [ -f "/usr/include/python3.10/Python.h" ]; then \
+        ln -sf /usr/include/python3.10/Python.h $PYTHON_INCLUDE/python.h; \
+    fi && \
+    echo "=== End Debug ==="
+
 # Clone the source code from GitHub repository
 RUN git clone https://github.com/xiahaa/jps3d.git . && \
     git submodule update --init --recursive
 
 # Build BLJPS_Python
 WORKDIR /workspace/3rdparty/BLJPS_Python
+
+# Clone pybind11 since it's not included in the repository
+RUN git clone https://github.com/pybind/pybind11.git pybind11
+
 # Clean any existing build artifacts and create fresh build directory
 RUN rm -rf build && mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release \
-           -DPYTHON_EXECUTABLE=$(which python3) \
-           -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-           -DPYBIND11_PYTHON_VERSION=3.10 && \
-    cmake --build . --config Release
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DPYBIND11_PYTHON_VERSION=3.10 && \
+    cmake --build . --config Release --parallel $(nproc)
 
 # Build jps3d Python bindings
 WORKDIR /workspace/3rdparty/jps3d
@@ -48,10 +67,12 @@ ENV JPS_INCLUDE_DIR=include
 RUN python3 setup.py build_ext --inplace
 
 # Verify builds completed successfully
-RUN echo "Verifying BLJPS_Python build..." && \
-    find /workspace/3rdparty/BLJPS_Python/build -name "*.so" -ls && \
-    echo "Verifying jps3d build..." && \
-    find /workspace/3rdparty/jps3d -name "*.so" -ls
+RUN echo "=== Build Verification ===" && \
+    echo "BLJPS_Python shared libraries:" && \
+    find /workspace/3rdparty/BLJPS_Python -name "*.so" -ls && \
+    echo "jps3d shared libraries:" && \
+    find /workspace/3rdparty/jps3d -name "*.so" -ls && \
+    echo "=== End Verification ==="
 
 # Production stage
 FROM idea-laser.tencentcloudcr.com/public/python:3.10.6

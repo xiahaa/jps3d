@@ -5,36 +5,50 @@ This directory contains Docker configurations to build shared object (.so) files
 ## Files
 
 - `Dockerfile` - Main Dockerfile for building both libraries
-- `Dockerfile.robust` - More robust version with additional error handling and verification
-- `build_docker.sh` - Build script with automated testing
+- `Dockerfile.robust` - Enhanced version with additional debugging and error handling
+- `build_docker.sh` - Build script with automated testing and fallback options
 - `Docker_README.md` - This documentation
 
 ## Quick Start
 
 ### Option 1: Using the build script (Recommended)
 ```bash
+chmod +x build_docker.sh
 ./build_docker.sh
 ```
+
+The build script will:
+1. Try the standard Dockerfile first
+2. Fall back to the robust version if the standard build fails
+3. Test both libraries after successful build
 
 ### Option 2: Manual Docker build
 ```bash
 # Build the Docker image
 docker build -t jps-planners:latest .
 
-# Test the built libraries
-docker run --rm jps-planners:latest python3 -c "
-import sys
-sys.path.append('/usr/local/lib/python3.10/site-packages')
-import BL_JPS
-import jps_planner_bindings
-print('Both libraries imported successfully!')
-"
-```
-
-### Option 3: Using the robust Dockerfile
-```bash
+# Or use the robust version if you encounter issues
 docker build -f Dockerfile.robust -t jps-planners:robust .
 ```
+
+## Common Build Issues and Solutions
+
+### Issue 1: Python Header Detection
+**Error**: `Can't find python.h in /usr/local/include/python3.10`
+
+**Solution**: The Dockerfile now uses `sysconfig.get_path('include')` for proper Python header detection.
+
+### Issue 2: Missing pybind11 Submodule
+**Error**: `add_subdirectory given source "pybind11" which is not an existing directory`
+
+**Solutions**:
+1. The robust Dockerfile manually clones pybind11 if the submodule is missing
+2. Uses `git clone --recursive` to ensure all submodules are initialized
+
+### Issue 3: CMake Cache Conflicts
+**Error**: `CMakeCache.txt directory is different than the directory where CMakeCache.txt was created`
+
+**Solution**: All Dockerfiles now pull fresh code from GitHub and clean build directories.
 
 ## Built Libraries
 
@@ -71,6 +85,23 @@ The Docker image contains two compiled shared libraries:
   print(f"Time: {result.time_spent}")
   ```
 
+## Build Process
+
+The Dockerfile uses a multi-stage build that pulls source code directly from GitHub:
+
+1. **Source Retrieval**: Clones the repository from https://github.com/xiahaa/jps3d.git
+2. **Dependency Resolution**: Ensures all git submodules (especially pybind11) are properly initialized
+3. **Builder Stage**: Compiles both libraries with all build dependencies, ensuring clean builds
+4. **Production Stage**: Creates a minimal runtime image with only the compiled libraries and runtime dependencies
+
+### Key Improvements:
+
+- **Robust Python Detection**: Uses `sysconfig` for accurate Python header and library paths
+- **Submodule Handling**: Automatically handles missing pybind11 submodule
+- **Clean Builds**: Removes any existing build artifacts before compilation
+- **Debug Information**: Robust version includes detailed debugging output
+- **Fallback Strategy**: Build script tries multiple approaches
+
 ## Dependencies
 
 The Docker image includes all necessary dependencies:
@@ -89,38 +120,9 @@ The Docker image includes all necessary dependencies:
 - setuptools
 - wheel
 
-## Build Process
-
-The Dockerfile uses a multi-stage build that pulls source code directly from GitHub:
-
-1. **Source Retrieval**: Clones the repository from https://github.com/xiahaa/jps3d.git
-2. **Builder Stage**: Compiles both libraries with all build dependencies, ensuring clean builds
-3. **Production Stage**: Creates a minimal runtime image with only the compiled libraries and runtime dependencies
-
-This approach ensures:
-- No local build cache conflicts
-- Consistent builds across different environments
-- Always uses the latest code from the repository
-
-### BLJPS_Python Build
-- Uses CMake with pybind11
-- Requires C++17 support
-- Builds against Python 3.10
-
-### jps3d Build
-- First builds C++ libraries with CMake
-- Then builds Python bindings with setuptools
-- Requires Boost, Eigen3, and yaml-cpp
-
 ## Troubleshooting
 
-### Common Issues
-
-1. **Import errors**: Make sure PYTHONPATH includes `/usr/local/lib/python3.10/site-packages`
-2. **Missing dependencies**: Use `Dockerfile.robust` for more comprehensive dependency handling
-3. **Build failures**: Check that all git submodules are properly initialized
-
-### Debugging
+### Debug Build Issues
 
 To debug build issues, you can run the builder stage interactively:
 ```bash
@@ -128,31 +130,54 @@ docker build --target builder -t jps-debug .
 docker run -it jps-debug /bin/bash
 ```
 
-### Verification
+### Check Python Configuration
+The robust Dockerfile includes debug output showing:
+- Python executable path
+- Python version
+- Include directory
+- Library paths
+- Available python.h locations
 
-The robust Dockerfile includes verification steps that check:
-- Shared libraries are built successfully
-- Libraries can be imported in Python
-- No missing runtime dependencies
+### Manual Submodule Initialization
+If submodule issues persist:
+```bash
+docker run -it --entrypoint /bin/bash jps-debug
+cd /workspace/3rdparty/BLJPS_Python
+git submodule update --init --recursive
+```
 
 ## Deployment
 
 To use these libraries in your deployment:
 
-1. Copy the built .so files from the Docker image:
+1. **Copy libraries from Docker image**:
    ```bash
    docker create --name temp-container jps-planners:latest
    docker cp temp-container:/usr/local/lib/python3.10/site-packages/ ./libs/
    docker rm temp-container
    ```
 
-2. Or use the Docker image directly as a base for your application:
+2. **Use as base image**:
    ```dockerfile
    FROM jps-planners:latest
    COPY your_app.py /app/
    CMD ["python3", "your_app.py"]
    ```
 
+3. **Multi-stage deployment**:
+   ```dockerfile
+   FROM jps-planners:latest as libs
+   FROM your-base-image:latest
+   COPY --from=libs /usr/local/lib/python3.10/site-packages/ /usr/local/lib/python3.10/site-packages/
+   ```
+
 ## Base Image
 
 Uses `idea-laser.tencentcloudcr.com/public/python:3.10.6` as specified in requirements.
+
+## Testing
+
+The build process includes automatic testing that verifies:
+- Both libraries can be imported successfully
+- Basic functionality works (object creation, simple planning calls)
+- No missing runtime dependencies

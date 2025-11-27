@@ -19,8 +19,8 @@ PYBIND11_MODULE(BL_JPS, m) {
 		.def("findSolution", &BL_JPS::findSolution, "", "sX"_a, "sY"_a, "eX"_a, "eY"_a)
 		.def("plan_2d", &BL_JPS::plan_2d, "", "grid"_a, "width"_a, "height"_a, "startX"_a, "startY"_a, "endX"_a, "endY"_a, "originX"_a, "originY"_a, "resolution"_a);
 
-	// Define the PlanResult struct for Python
-    py::class_<PlanResult>(m, "PlanResult")
+	// Define the BLJPSPlanResult struct for Python
+    py::class_<PlanResult>(m, "BLJPSPlanResult")
         .def(py::init<>())
         .def_readwrite("path", &PlanResult::path)
         .def_readwrite("time_spent", &PlanResult::time_spent);

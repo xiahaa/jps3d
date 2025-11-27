@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for building BLJPS_Python and jps3d shared libraries
-FROM idea-laser.tencentcloudcr.com/public/python:3.10.6 as builder
+FROM idea-laser.tencentcloudcr.com/public/python:3.10.6 AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -25,20 +25,47 @@ RUN pip install --no-cache-dir \
 WORKDIR /workspace
 
 # Clone the source code from GitHub repository
-RUN git clone https://github.com/xiahaa/jps3d.git . && \
-    git submodule update --init --recursive
+RUN git clone --recursive https://github.com/xiahaa/jps3d.git . || \
+    (git clone https://github.com/xiahaa/jps3d.git . && git submodule update --init --recursive)
 
 # Build BLJPS_Python
 WORKDIR /workspace/3rdparty/BLJPS_Python
+
+# Clone pybind11 since it's not included in the repository
+RUN echo "Cloning pybind11..." && \
+    rm -rf pybind11 && \
+    git clone https://github.com/pybind/pybind11.git pybind11 && \
+    cd pybind11 && git checkout v2.10.4
+
+# Fix CMakeLists.txt to use proper C++ standard
+RUN sed -i 's/set(PYBIND11_CPP_STANDARD -std=c++1z)/set(CMAKE_CXX_STANDARD 17)/' CMakeLists.txt && \
+    sed -i 's/set(PYBIND11_CPP_STANDARD -std=c++17)/set(CMAKE_CXX_STANDARD 17)/' CMakeLists.txt
+
+# Debug: Check Python configuration and fix headers
+RUN echo "=== Python Configuration Debug ===" && \
+    echo "Python executable: $(which python3)" && \
+    echo "Python version: $(python3 --version)" && \
+    echo "Python include dir: $(python3 -c 'import sysconfig; print(sysconfig.get_path(\"include\"))')" && \
+    echo "Python library: $(python3 -c 'import sysconfig; print(sysconfig.get_config_var(\"LIBDIR\"), sysconfig.get_config_var(\"LDLIBRARY\"))')" && \
+    echo "Checking for python.h..." && \
+    find /usr -name "python.h" 2>/dev/null | head -5 && \
+    echo "Creating symlink for python headers if needed..." && \
+    PYTHON_INCLUDE=$(python3 -c 'import sysconfig; print(sysconfig.get_path("include"))') && \
+    if [ ! -f "$PYTHON_INCLUDE/python.h" ] && [ -f "/usr/include/python3.10/Python.h" ]; then \
+        ln -sf /usr/include/python3.10/Python.h $PYTHON_INCLUDE/python.h; \
+    fi && \
+    echo "=== End Debug ==="
 
 # Clean any existing build artifacts and create fresh build directory
 RUN rm -rf build && mkdir -p build && cd build && \
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CXX_STANDARD=17 \
         -DPYTHON_EXECUTABLE=$(which python3) \
-        -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-        -DPYTHON_LIBRARY=$(python3 -c "import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))") \
-        -DPYBIND11_PYTHON_VERSION=3.10 && \
+        -DPYTHON_INCLUDE_DIR=$(python3 -c "import sysconfig; print(sysconfig.get_path('include'))") \
+        -DPYTHON_LIBRARY=$(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))") \
+        -DPYBIND11_PYTHON_VERSION=3.10 \
+        -DCMAKE_VERBOSE_MAKEFILE=ON && \
     cmake --build . --config Release --parallel $(nproc)
 
 # Build jps3d using CMake first (for dependencies)
@@ -88,23 +115,6 @@ ENV PYTHONPATH="/usr/local/lib/python3.10/site-packages:${PYTHONPATH}"
 
 # Set working directory
 WORKDIR /app
-
-# Test imports on container startup
-RUN python3 -c "
-import sys
-sys.path.insert(0, '/usr/local/lib/python3.10/site-packages')
-try:
-    import BL_JPS
-    print('✓ BL_JPS library loaded successfully')
-except Exception as e:
-    print('✗ BL_JPS import failed:', e)
-
-try:
-    import jps_planner_bindings
-    print('✓ jps_planner_bindings library loaded successfully')
-except Exception as e:
-    print('✗ jps_planner_bindings import failed:', e)
-"
 
 # Default command
 CMD ["python3"]
