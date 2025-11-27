@@ -2,6 +2,13 @@
 
 This repository provides a framework and tools for benchmarking single agent path planning algorithms on large-scale maps. It includes C++ implementations, Python bindings, and example scripts for both C++ and Python.
 
+## benchmark result
+
+![](benchmark_results/benchmark_plots_20251127_120325.png)
+![](planner_test_results.png)
+
+jps and BL_JPS are relatively faster than SILAS original astar.
+
 ## Folder Structure
 
 - `3rdparty/`: Open-source code for single agent path planning, including the AMRA library and its dependencies.
