@@ -1,0 +1,110 @@
+# Multi-stage Dockerfile for building BLJPS_Python and jps3d shared libraries
+FROM idea-laser.tencentcloudcr.com/public/python:3.10.6 as builder
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    libeigen3-dev \
+    libyaml-cpp-dev \
+    libboost-all-dev \
+    python3-dev \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    pybind11[global] \
+    setuptools \
+    wheel \
+    numpy
+
+# Set working directory
+WORKDIR /workspace
+
+# Clone the source code from GitHub repository
+RUN git clone https://github.com/xiahaa/jps3d.git . && \
+    git submodule update --init --recursive
+
+# Build BLJPS_Python
+WORKDIR /workspace/3rdparty/BLJPS_Python
+
+# Clean any existing build artifacts and create fresh build directory
+RUN rm -rf build && mkdir -p build && cd build && \
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DPYTHON_EXECUTABLE=$(which python3) \
+        -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+        -DPYTHON_LIBRARY=$(python3 -c "import distutils.sysconfig as sysconfig; import os; print(os.path.join(sysconfig.get_config_var('LIBDIR'), sysconfig.get_config_var('LDLIBRARY')))") \
+        -DPYBIND11_PYTHON_VERSION=3.10 && \
+    cmake --build . --config Release --parallel $(nproc)
+
+# Build jps3d using CMake first (for dependencies)
+WORKDIR /workspace/3rdparty/jps3d
+# Clean any existing build artifacts
+RUN rm -rf build && rm -f *.so && mkdir -p build && cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build . --config Release --parallel $(nproc)
+
+# Build jps3d Python bindings
+ENV BOOST_INCLUDE_DIR=/usr/include
+ENV JPS_INCLUDE_DIR=include
+RUN python3 setup.py build_ext --inplace
+
+# Verify builds completed successfully
+RUN echo "=== Build Verification ===" && \
+    echo "BLJPS_Python shared libraries:" && \
+    find /workspace/3rdparty/BLJPS_Python -name "*.so" -ls && \
+    echo "jps3d shared libraries:" && \
+    find /workspace/3rdparty/jps3d -name "*.so" -ls && \
+    echo "=== End Verification ==="
+
+# Production stage
+FROM idea-laser.tencentcloudcr.com/public/python:3.10.6
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libeigen3-dev \
+    libyaml-cpp-dev \
+    libboost-all-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python runtime dependencies
+RUN pip install --no-cache-dir \
+    pybind11 \
+    numpy
+
+# Create directories for shared libraries
+RUN mkdir -p /usr/local/lib/python3.10/site-packages
+
+# Copy built shared libraries from builder stage
+COPY --from=builder /workspace/3rdparty/BLJPS_Python/build/*.so /usr/local/lib/python3.10/site-packages/
+COPY --from=builder /workspace/3rdparty/jps3d/*.so /usr/local/lib/python3.10/site-packages/
+
+# Set Python path to include the shared libraries
+ENV PYTHONPATH="/usr/local/lib/python3.10/site-packages:${PYTHONPATH}"
+
+# Set working directory
+WORKDIR /app
+
+# Test imports on container startup
+RUN python3 -c "
+import sys
+sys.path.insert(0, '/usr/local/lib/python3.10/site-packages')
+try:
+    import BL_JPS
+    print('✓ BL_JPS library loaded successfully')
+except Exception as e:
+    print('✗ BL_JPS import failed:', e)
+
+try:
+    import jps_planner_bindings
+    print('✓ jps_planner_bindings library loaded successfully')
+except Exception as e:
+    print('✗ jps_planner_bindings import failed:', e)
+"
+
+# Default command
+CMD ["python3"]
