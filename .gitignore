@@ -78,3 +78,6 @@ simple_benchmark_result.png
 3rdparty/silas-os-python/
 benchmark_results/*.json
 benchmark_results/*.csv
+tests/enhanced_silas_wrapper_example.py
+test_interactive.py
+__pycache__/

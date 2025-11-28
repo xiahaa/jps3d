@@ -85,3 +85,11 @@ For questions or contributions, please contact the project maintainer.
 ## reference
 1. https://ojs.aaai.org/index.php/AIIDE/article/view/31882/34049
 2. https://github.com/ubco-db/database-pathfinding
+
+
+
+## GPU version
+
+### reference
+1. https://github.com/jbujak/A-star-CUDA
+2. https://ojs.aaai.org/index.php/AAAI/article/view/9367

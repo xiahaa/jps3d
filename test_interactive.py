@@ -10,6 +10,8 @@ import BL_JPS
 # import warthog
 # import RAstarBucket
 # import AMRA
+# from custar import solve_gpu_pathfinding, reconstruct_path_cpu
+from HPA import HPAStar
 
 # Import silas
 from pathlib import Path
@@ -54,6 +56,9 @@ for y in range(img_height):
 
 origin = [0, 0]
 dim = [img_width, img_height]
+
+# create HPAStar instance
+hpa = HPAStar(img_width, img_height, 10)
 
 start = None
 goal = None
@@ -198,7 +203,7 @@ while running:
             goal_rc = (int(goal_w[0]), int(goal_w[1]))      # (y, x) -> (row, col)
 
             # Convert image to boolean grid (True = obstacle)
-            grid = gray >= 128
+            grid = gray >= 200
 
             # Run planning with timing
             start_time = time.perf_counter()
@@ -209,6 +214,15 @@ while running:
             plan_time = (end_time - start_time) * 1000
             # to milliseconds
             print(f"SILAS Plan time: {plan_time:.2f} milliseconds")
+
+
+            # Run Solver
+            start_time = time.perf_counter()
+            hpa.update_map(np.invert(grid.astype(bool)))
+            path = hpa.find_path(start_rc, goal_rc)
+            end_time = time.perf_counter()
+            plan_time = (end_time - start_time) * 1000
+            print(f"HPA Plan time: {plan_time:.2f} milliseconds")
 
             # path = []
             # plan_time = 0.0
