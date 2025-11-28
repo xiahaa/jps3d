@@ -93,3 +93,4 @@ For questions or contributions, please contact the project maintainer.
 ### reference
 1. https://github.com/jbujak/A-star-CUDA
 2. https://ojs.aaai.org/index.php/AAAI/article/view/9367
+3. https://github.com/lkoshale/DA_STAR/tree/master
