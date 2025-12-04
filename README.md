@@ -94,3 +94,8 @@ For questions or contributions, please contact the project maintainer.
 1. https://github.com/jbujak/A-star-CUDA
 2. https://ojs.aaai.org/index.php/AAAI/article/view/9367
 3. https://github.com/lkoshale/DA_STAR/tree/master
+
+
+### porting to silas
+1. silas planning 2d interface: https://laser-public.coding.net/p/silas/d/silas-os-python/git/tree/master/silas/os/kernel/tspatial_processing/planning/single_agent_planning/single_agent_planning_2d.py#L236;
+2. https://laser-public.coding.net/p/silas/d/silas-os-python-p2/git/tree/master: 实习生分支代码；
