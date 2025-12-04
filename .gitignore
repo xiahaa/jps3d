@@ -81,3 +81,5 @@ benchmark_results/*.csv
 tests/enhanced_silas_wrapper_example.py
 test_interactive.py
 __pycache__/
+3rdparty/A-star-CUDA/
+3rdparty/DA_STAR/
